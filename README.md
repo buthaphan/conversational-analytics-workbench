@@ -8,7 +8,7 @@ A portfolio showcase for exploring business data with natural-language questions
 
 ## Current stage
 
-Idea capture and function review. The first task, TASK-001 (user accounts and sign-in), is accepted for specification. There is no application code, Git repository, task specification, or feature branch yet. The proposed base branch is `main`; the user will initialize and manage Git. See `docs/PROJECT-SETUP.md` and the two idea folders under `docs/ideas/` for the current decisions and open items.
+Idea capture and function review. TASK-001 (user accounts and sign-in) is accepted and paused until TASK-002 (design system) is approved. There is no application code or task specification yet. The proposed base branch is `main`; the user will initialize and manage Git. See `docs/PROJECT-SETUP.md` and the two idea folders under `docs/ideas/` for the current decisions and open items.
 
 ## Agreed product boundaries
 

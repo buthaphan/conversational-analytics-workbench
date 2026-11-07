@@ -79,8 +79,8 @@
 7. Whether chart changes use both natural-language requests and direct UI controls.
 8. Exact Docker service layout and local dependency setup.
 9. AWS hosting topology, manual run/stop procedure, and budget guardrails.
-10. Final design tokens, chart palette, typography, responsive breakpoints, and light/dark mode.
-11. Milestone 1 acceptance criteria and task sequence after TASK-001.
+10. Final design tokens, chart palette, typography, responsive breakpoints, and light/dark mode (TASK-002 design system).
+11. Milestone 1 acceptance criteria and task sequence after TASK-002 and TASK-001.
 
 ## Decisions recorded 2026-11-08
 
@@ -94,6 +94,8 @@
 | Devices | One authentication session per user; a new sign-in ends the previous one. |
 | Closing without sign-out | Treated as sign-out, enforced by a 10-minute server-side inactivity timeout; refresh keeps the same session. |
 | Result `limit` | Selects displayed/ranked rows from the stored active result set; it does not limit retrieval. |
-| First task | TASK-001: user accounts and sign-in, including the minimal repository, Docker Compose, and CI foundation it needs. Branch `feature/TASK-001-user-accounts`. |
+| TASK-001 scope | User accounts and sign-in, plus the API, PostgreSQL, and Docker Compose foundation they need. Branch `feature/TASK-001-user-accounts`. The web app skeleton moved to TASK-002. |
+| TASK-002 scope | Design system, accepted 2026-11-08: minimal web skeleton (React, Vite, TypeScript, Tailwind), light-mode role-named tokens (dark-ready), chart palette and ECharts theme, starter components, reference page. Branch `feature/TASK-002-design-system`. |
+| Task order | TASK-002 design system runs first; TASK-001 specification resumes after it; the `customer_spending` slice is proposed as TASK-003. Task numbers are IDs, not order. |
 | Local account | Seed `user@example.test` / `123456` for local development and tests only; never in the AWS showcase. |
 | Review skill name | Project review stage renamed to `/task-review` (output `05-task-review.md`) to avoid colliding with Claude Code's bundled `/code-review`. |

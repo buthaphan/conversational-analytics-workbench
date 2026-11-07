@@ -2,7 +2,7 @@
 
 ## Decision
 
-- **Status:** proposal; not yet accepted for specification. Planned after TASK-001 (user accounts).
+- **Status:** proposal; not yet accepted for specification. Planned as TASK-003, after TASK-002 (design system) and TASK-001 (user accounts).
 
 ## Problem
 

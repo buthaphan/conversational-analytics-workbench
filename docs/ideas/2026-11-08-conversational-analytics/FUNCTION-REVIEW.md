@@ -1,8 +1,8 @@
 # Function review: Conversational Analytics Workbench
 
 **Status:** Recommended; not yet accepted for specification  
-**Proposed task ID:** TASK-002 (provisional; follows TASK-001 user accounts)  
-**Proposed branch:** `feature/TASK-002-customer-spending`
+**Proposed task ID:** TASK-003 (provisional; follows TASK-002 design system and TASK-001 user accounts)  
+**Proposed branch:** `feature/TASK-003-customer-spending`
 
 ## Summary
 

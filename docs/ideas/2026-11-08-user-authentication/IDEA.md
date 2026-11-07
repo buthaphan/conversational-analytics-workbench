@@ -6,6 +6,7 @@
 - **Decision date:** 2026-11-08
 - **Chosen scope:** First task. Ordinary user accounts, sign-in, and sign-out, with the session rules under "Agreed behavior". Includes the minimal repository, Docker Compose (web, API, PostgreSQL), and CI foundation needed to build and test it. Analytics features are out of scope.
 - **Proposed task/branch:** TASK-001, `feature/TASK-001-user-accounts`
+- **Sequencing (2026-11-08):** specification paused until TASK-002 (design system) is approved; see the TASK-001 decision log on its branch. TASK-002 now delivers the web app skeleton, so TASK-001 keeps the API, PostgreSQL, and Docker Compose foundation.
 - **Account provisioning (decided 2026-11-08):** a seed creates one ordinary local account, `user@example.test` with password `123456`. This is a known, deliberately weak development credential: it is for local development and automated tests only and must never be created in the AWS showcase or any internet-reachable environment. Store only a password hash, never the plain password.
 - **Inactivity timeout (decided 2026-11-08):** 10 minutes with no activity from an open page ends the session. An open page must keep the session alive while it is in use, so a refresh or an idle-but-open tab under 10 minutes keeps the same session.
 - **Still open, not blocking TASK-001:** how showcase users get accounts on AWS.
