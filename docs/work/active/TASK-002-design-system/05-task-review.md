@@ -1,11 +1,11 @@
 # Task review: TASK-002 Design system
 
 **Review round:** 3 (re-review after implementation pass 3)  
-**Reviewed revision/diff:** commit `7acff88` plus uncommitted changes on `feature/TASK-002-design-system`: `web/src/App.test.tsx`, `.github/workflows/ci.yml`, `docs/design/DESIGN-SYSTEM.md`, `03-implementation-notes.md`. Reviewed 2026-11-08.  
+**Reviewed revision/diff:** commit `e629978` plus uncommitted changes on `feature/TASK-002-design-system`: `web/src/App.test.tsx`, `.github/workflows/ci.yml`, `docs/design/DESIGN-SYSTEM.md`, `03-implementation-notes.md`. Reviewed 2026-11-08.  
 **Spec revision:** 1 (approved 2026-11-08)  
-**Method:** Read the round-3 diff, implementation notes, and spec. Searched `web/src` for other `echarts` mocks, lazy imports, and timed waits. Re-ran locally (no network): `format:check`, `lint`, `typecheck`, `build` (with `check:build`), and the root `npm test` script 10 times. Code outside this diff was reviewed in rounds 1 and 2 and has not changed since `7acff88`; those results carry forward (summary below).  
+**Method:** Read the round-3 diff, implementation notes, and spec. Searched `web/src` for other `echarts` mocks, lazy imports, and timed waits. Re-ran locally (no network): `format:check`, `lint`, `typecheck`, `build` (with `check:build`), and the root `npm test` script 10 times. Code outside this diff was reviewed in rounds 1 and 2 and has not changed since `e629978`; those results carry forward (summary below).  
 **Independence caveat:** the same agent wrote the round-3 fix and this review. To offset that, every verification was re-run rather than taken from the notes, and the test-coverage impact of the new mock was checked separately.  
-**History:** the round-1 review is in commit `7acff88`. Round 2 found R1–R4, recorded in the previous uncommitted version of this file and summarized below.
+**History:** the round-1 review is in commit `e629978`. (Commit IDs were updated after the 2026-11-08 history rewrite.) Round 2 found R1–R4, recorded in the previous uncommitted version of this file and summarized below.
 
 ## Verification run in this review
 

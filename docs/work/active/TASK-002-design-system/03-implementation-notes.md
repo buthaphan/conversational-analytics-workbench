@@ -2,7 +2,7 @@
 
 **Spec revision:** 1 (approved 2026-11-08)  
 **Plan:** [02-implementation-plan.md](02-implementation-plan.md)  
-**Branch:** `feature/TASK-002-design-system` (started from `381f8ec`; steps 1–15 and review round 1 fixes committed by the user in `7acff88`; review round 2 fixes uncommitted)  
+**Branch:** `feature/TASK-002-design-system` (started from `9ddab42`; steps 1–15 and review round 1 fixes committed by the user in `e629978`; review round 2 fixes, the user's checks, and the closeout draft in `aee343d`)  
 **Status:** Steps 1–15 implemented with tests; review rounds 1 and 2 fixed (see the sections at the end). Step 16 done: the user passed the AC-9 manual accessibility check and approved the visual design (AC-13) on 2026-11-08. R3 resolved by adding an "Open design choices" section to `DESIGN-SYSTEM.md` (user decision, 2026-11-08).
 
 ## Changed files

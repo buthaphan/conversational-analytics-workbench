@@ -2,7 +2,7 @@
 
 **Status:** Draft. Awaiting the external CI run (after the user pushes) and user acceptance.  
 **Spec revision:** 1 (approved 2026-11-08)  
-**Branch:** `feature/TASK-002-design-system`. Review rounds 1–2 fixes are committed in `7acff88`; round-3 fixes, the user's checks, and this closeout are uncommitted at the time of drafting.
+**Branch:** `feature/TASK-002-design-system`. Review rounds 1–2 fixes are in `e629978`; round-3 fixes, the user's checks, and this closeout draft are in `aee343d`. History was rewritten on 2026-11-08, before the first push, to replace the commit identity with the user's GitHub no-reply address and remove an employer product name from the docs; commit IDs here are the rewritten ones.
 
 ## Definition of Done
 

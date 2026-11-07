@@ -1,7 +1,7 @@
 # Task context: TASK-002 Design system
 
 **Branch:** `feature/TASK-002-design-system`  
-**Idea record:** [IDEA.md](../../../ideas/2026-11-08-design-system/IDEA.md), [FUNCTION-REVIEW.md](../../../ideas/2026-11-08-design-system/FUNCTION-REVIEW.md) (committed on `main` in `35f981f`)  
+**Idea record:** [IDEA.md](../../../ideas/2026-11-08-design-system/IDEA.md), [FUNCTION-REVIEW.md](../../../ideas/2026-11-08-design-system/FUNCTION-REVIEW.md) (committed on `main` in `d501e13`)  
 **Status:** Spec revision 1 and plan approved 2026-11-08; ready for implementation
 
 ## Accepted intent
