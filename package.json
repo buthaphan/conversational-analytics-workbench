@@ -2,15 +2,16 @@
   "name": "conversational-analytics-workbench",
   "private": true,
   "workspaces": [
-    "web"
+    "web",
+    "api"
   ],
   "scripts": {
     "dev": "npm run dev -w web",
-    "format": "npm run format -w web",
-    "format:check": "npm run format:check -w web",
-    "lint": "npm run lint -w web",
-    "typecheck": "npm run typecheck -w web",
-    "test": "npm run test -w web",
-    "build": "npm run build -w web"
+    "format": "npm run format --workspaces",
+    "format:check": "npm run format:check --workspaces",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces",
+    "build": "npm run build --workspaces"
   }
 }

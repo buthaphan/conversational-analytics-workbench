@@ -14,7 +14,7 @@
 
 ## In the user's words/context
 
-While specifying TASK-001 (user accounts and sign-in), the user chose to define the design system before building any UI, so that the app is consistent from the first screen ([TASK-001 DEC-001](../../work/active/TASK-001-user-accounts/DECISION-LOG.md) on branch `feature/TASK-001-user-accounts`). [DESIGN-SYSTEM.md](../../design/DESIGN-SYSTEM.md) already records the direction and says detailed tokens must be approved before UI implementation.
+While specifying TASK-001 (user accounts and sign-in), the user chose to define the design system before building any UI, so that the app is consistent from the first screen ([TASK-001 DEC-001](../../work/completed/TASK-001-user-accounts/DECISION-LOG.md)). [DESIGN-SYSTEM.md](../../design/DESIGN-SYSTEM.md) already records the direction and says detailed tokens must be approved before UI implementation.
 
 ## Intended outcome
 

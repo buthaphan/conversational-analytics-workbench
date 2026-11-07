@@ -1,16 +1,23 @@
-# Keep secrets and local development data out of Docker build contexts
+# Keep secrets and local development data out of Docker build contexts.
+# Patterns without "**/" only match at the repository root, so nested paths are listed explicitly.
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
 .aws/
 .ssh/
 .git/
-.claude/settings.local.json
-node_modules/
-dist/
-build/
-coverage/
+.github/
+.claude/
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+api/src/generated/
 *.pem
 *.key
 *.p12
 *.pfx
+**/*.pem
+**/*.key

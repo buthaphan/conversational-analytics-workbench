@@ -18,6 +18,7 @@ node_modules/
 dist/
 build/
 coverage/
+api/src/generated/
 *.tsbuildinfo
 *.log
 .DS_Store

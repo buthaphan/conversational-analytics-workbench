@@ -41,7 +41,7 @@ A signed-in user can access the one-page workspace, keep analysis state isolated
 
 - How should showcase users get accounts on AWS: pre-created by the owner, invitation, or self-registration? (Local development uses the seeded account; this is needed before the public showcase, not for TASK-001.)
 - What does time-limited showcase access mean: account expiry, access-code expiry, or only session expiry?
-- Whether there is also an absolute session lifetime in addition to the 10-minute inactivity timeout (not blocking TASK-001).
+- ~~Whether there is also an absolute session lifetime in addition to the 10-minute inactivity timeout.~~ Decided 2026-11-08: 12 hours (TASK-001 DEC-007).
 - Should the first milestone include password recovery, MFA, or social/enterprise login? Recommendation is to defer unless a clear showcase need exists.
 
 
