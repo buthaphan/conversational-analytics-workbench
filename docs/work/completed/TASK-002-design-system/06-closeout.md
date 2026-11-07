@@ -1,8 +1,8 @@
 # Closeout: TASK-002 Design system
 
-**Status:** Draft. Awaiting the external CI run (after the user pushes) and user acceptance.  
+**Status:** Accepted by the user on 2026-11-08. External CI passed.  
 **Spec revision:** 1 (approved 2026-11-08)  
-**Branch:** `feature/TASK-002-design-system`. Review rounds 1–2 fixes are in `e629978`; round-3 fixes, the user's checks, and this closeout draft are in `aee343d`. History was rewritten on 2026-11-08, before the first push, to replace the commit identity with the user's GitHub no-reply address and remove an employer product name from the docs; commit IDs here are the rewritten ones.
+**Branch:** `feature/TASK-002-design-system`. Review rounds 1–2 fixes are in `e629978`; round-3 fixes, the user's checks, and this closeout draft are in `aee343d`. History was rewritten on 2026-11-08, before the first push, to replace the commit identity with the user's GitHub no-reply address and remove an employer product name from the docs; commit IDs here are the rewritten ones. Pushed on 2026-11-08 to the private repository `buthaphan/conversational-analytics-workbench` (`main` at `d501e13`, this branch at `051133b`). `feature/TASK-001-user-accounts` stays local until that task resumes.
 
 ## Definition of Done
 
@@ -18,18 +18,19 @@
 | AC-8 Chart palettes, theme, wrapper | Met | `chartPalette.test.ts` (on `surface` and `canvas`), `chartTheme.test.ts`, `ChartWithTable.test.tsx` |
 | AC-9 Manual accessibility check | Met | User, Chrome, 2026-11-08: Tab and Shift+Tab, 320 px, 200% zoom, and reduced motion all passed (checklist in implementation notes) |
 | AC-10 Reference page, development only | Met | Name, role, and value per token; all color variables in built CSS; `check:build` proves production exclusion |
-| AC-11 CI workflow | Met by inspection; **GitHub run unverified** | `.github/workflows/ci.yml` matches the spec; the same scripts pass locally. It runs only after the user pushes. |
+| AC-11 CI workflow | Met | `.github/workflows/ci.yml` matches the spec. The GitHub Actions run for `feature/TASK-002-design-system` at `051133b` passed (reported by the user, 2026-11-08). |
 | AC-12 `DESIGN-SYSTEM.md` | Met | All required topics; "Open design choices" section added at the user's direction (R3, 2026-11-08) |
 | AC-13 Visual approval | Met | Approved by the user, 2026-11-08 |
 
 Spec Definition of Done:
 
-- [x] Every acceptance criterion is met with evidence. AC-11's GitHub run is pending, as the spec expects.
+- [x] Every acceptance criterion is met with evidence, including AC-11's GitHub run.
 - [x] Required tests and checks pass, and the results are recorded.
 - [x] Review findings are resolved or explicitly accepted by the user (see below).
 - [x] `DESIGN-SYSTEM.md` and known limitations are current.
 - [x] The user has approved the reference page (AC-13).
-- [ ] The user accepts closeout; the external CI state is reported accurately. *(Awaiting the user.)*
+- [x] The external CI state is reported accurately: passed (see below).
+- [x] The user accepts closeout (2026-11-08).
 
 ## Verification and review
 
@@ -39,7 +40,7 @@ Spec Definition of Done:
   - Round 2: R1 blocking (flaky `npm test`), plus R2 and R4. All fixed.
   - Round 3: no new defects. R3 resolved by the user's decision.
   - **Unresolved:** only the optional suggestions S1–S3 (listed below).
-- **External CI:** **not yet run.** GitHub Actions runs after the user pushes. This closeout makes no claim about the GitHub result; record it below when it is available.
+- **External CI:** **passed.** GitHub Actions workflow `CI` ran on the push of `feature/TASK-002-design-system` (`051133b`) and passed, as reported by the user on 2026-11-08. It ran `npm ci`, `format:check`, `lint`, `typecheck`, `test`, and `build` with `check:build` on Ubuntu with Node from `.nvmrc`. `main` has no workflow file yet, so no run is expected there until this branch is merged. Runs: <https://github.com/buthaphan/conversational-analytics-workbench/actions> (private).
 
 ## Limitations and pending decisions
 
@@ -60,7 +61,7 @@ Spec Definition of Done:
 
 ## User acceptance
 
-- Accepted by: _pending_
-- Date: _pending_
-- External CI result: _pending (record the GitHub Actions run link and status after pushing)_
-- Notes:
+- Accepted by: buthaphan
+- Date: 2026-11-08
+- External CI result: Passed, 2026-11-08 (`feature/TASK-002-design-system` at `051133b`)
+- Notes: Optional suggestions S1–S3 and the deferred design work stay open for later tasks. Next: merge `feature/TASK-002-design-system` into `main` through a pull request, then resume TASK-001.
