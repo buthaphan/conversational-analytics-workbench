@@ -43,8 +43,9 @@ export function AuthApp() {
   const sessionGeneration = useRef(0);
   const enterState = useCallback((next: State) => {
     sessionGeneration.current += 1;
-    // An error from an earlier sign-out attempt never carries over to a new state (review N1).
+    // Sign-out progress and errors from an earlier state never carry over to a new one (review N1, N3).
     setSignOutFailed(false);
+    setSigningOut(false);
     setState(next);
   }, []);
 

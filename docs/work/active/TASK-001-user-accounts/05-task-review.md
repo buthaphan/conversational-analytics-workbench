@@ -1,6 +1,6 @@
 # Task review: TASK-001 User accounts and sign-in
 
-This file keeps every review round. **Round 2 (current) is at the end.**
+This file keeps every review round. **Round 3 (current) is at the end.**
 
 ---
 
@@ -147,3 +147,60 @@ No blocking defects. No security issue remains open in scope.
 3. **CI:** report the GitHub Actions result for `a34e8ad`.
 
 No requirement appears infeasible or ambiguous, so no decision-log entry is needed.
+
+**Outcome (recorded in round 3):**
+- The user chose to fix N1 and N2.
+- The user accepted AC-19 item 7 on automated evidence (DEC-009).
+- The user reported CI passing for `a34e8ad`.
+
+---
+
+# Review round 3
+
+**Reviewed revision:** `cb4fc57` (fixes for N1 and N2; also records DEC-009 and the CI result). Reviewed 2026-11-08.
+
+**Method:**
+- Read the code diff (5 lines in `AuthApp.tsx`) and the two new tests.
+- The same separate reviewer re-checked the change, again without the implementation notes.
+- Re-ran `npm test`: web 291 passed plus 1 expected fail; API 140 passed; exit 0.
+- Branch pushed and in sync; only the user's own untracked `docs/product/…txt` is outside Git.
+
+## Round-2 findings: re-verification
+
+| # | Status | Evidence |
+|---|---|---|
+| N1 stale sign-out error | **Fixed** | `enterState` clears `signOutFailed` (`AuthApp.tsx:47`), and every signed-in/signed-out transition goes through `enterState`. The new test fails against the previous code (the error stayed `true` across the keep-alive 401 and the new sign-in). |
+| N2 late sign-out reply | **Fixed for the reported effect** | `handleSignOut` captures the generation and ignores a reply from an earlier state (`AuthApp.tsx:77-81`). A late success no longer replaces the new session's shell, and a late failure no longer shows a stale error. The new test fails against the previous code. A remaining side effect is N3. |
+| Regressions | None found | A normal sign-out still shows "You have signed out." (generation unchanged; covered by "stops keep-alive requests after signing out"). A failed sign-out without a race still shows its error. The initial session check is unaffected. |
+
+## Findings (round 3)
+
+| # | Severity | Finding | Location | Required action |
+|---|---|---|---|---|
+| N3 | Low | **In the N2 situation, the new session's Sign out button stays busy until the old sign-out request finishes.** `signingOut` is set before the request (`:75`) and cleared only after the reply (`:79`); `enterState` does not reset it. If the user signs in again while an old sign-out request is still pending, the new shell's **Sign out** button shows as loading, and `Button` ignores clicks while loading (`Button.tsx:53`). Requests have no timeout, so the user may be unable to sign out of the new session until the stale request settles. The N2 test checks that the button is present, not that it is usable. (I said otherwise when presenting the change; the reviewer's reading is correct.) | `web/src/auth/AuthApp.tsx:24`, `:75-79`, `:112`; `web/src/components/ui/Button.tsx:53` | Add `setSigningOut(false)` to `enterState`, and extend the N2 test to assert that the new **Sign out** button is not busy (for example `aria-busy` is not `true`). |
+
+No blocking defects.
+
+## Acceptance criteria (round 3)
+
+| Criterion | Status | Evidence or gap |
+|---|---|---|
+| AC-1 to AC-13 | met | Unchanged since round 2; tests re-run |
+| AC-14 | met | N1 and N2 fixed. N3 is a low-severity edge case (a user who signs in again during a stalled sign-out cannot sign out until it settles); it does not contradict AC-14's stated behavior. |
+| AC-15 to AC-18 | met | Unchanged; CI for `a34e8ad` reported passing by the user. The run for `cb4fc57` has not been reported yet. |
+| AC-19 | met | 8 of 9 items passed (user, Chrome); item 7 accepted on automated evidence by the user (DEC-009) |
+
+## Recommendation (round 3)
+
+**Pending user decision, then closeout.** Nothing blocks the task. The user decides N3:
+- **Fix it:** a one-line change plus one extra assertion in the existing N2 test, then a quick re-check. Recommended, because it completes the N2 fix.
+- **Accept it** as a known low-severity limitation, recorded in the closeout.
+
+Also report the CI result for `cb4fc57` (or the commit that contains an N3 fix). No requirement appears infeasible or ambiguous, so no decision-log entry is needed.
+
+**Outcome (2026-11-08):**
+- The user chose to fix N3 and reported CI passing for `cb4fc57`.
+- **Fix:** `enterState` now also resets `signingOut`.
+- **Test:** the N2 test now asserts that the new session's **Sign out** button is not busy while the old request is pending. It failed first with `aria-busy="true"`.
+- **Verification:** web 291 passed plus 1 expected fail, 3 runs; build, format, lint, and typecheck clean ([03-implementation-notes.md](03-implementation-notes.md), pass 4).
+- **Not yet independently re-checked:** the change is a one-line state reset with a test that went red first. Closeout should confirm it and record CI for the commit that contains it.

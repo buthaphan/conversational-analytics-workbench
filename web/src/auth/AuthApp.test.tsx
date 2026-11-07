@@ -236,6 +236,11 @@ describe("signed-in shell and session end (AC-14)", () => {
       await u.click(await screen.findByRole("button", { name: "Sign out" })); // reply held
       await advance(2 * minute); // keep-alive gets 401: back to sign-in
       await signInAgain(u);
+      // The new session's Sign out button must be usable while the old request is still stuck (N3).
+      expect(screen.getByRole("button", { name: "Sign out" })).not.toHaveAttribute(
+        "aria-busy",
+        "true",
+      );
       await act(async () => releaseSignOut());
       await advance(0);
       expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();

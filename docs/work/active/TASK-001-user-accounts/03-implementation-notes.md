@@ -3,7 +3,7 @@
 **Spec revision:** 1 (approved 2026-11-08)  
 **Plan:** [02-implementation-plan.md](02-implementation-plan.md)  
 **Branch:** `feature/TASK-001-user-accounts` (started from `93d8d5a`; implementation committed by the user in `1e132c5`)  
-**Status:** All 20 plan steps done. Review round 1 findings (R1–R5) fixed in pass 2, round 2 findings (N1, N2) fixed in pass 3. AC-19: user, Chrome, 8 of 9 items passed; item 7 accepted on automated evidence (DEC-009). Ready for a short `/task-review` re-check of N1 and N2, then closeout.
+**Status:** All 20 plan steps done. Review round 1 findings (R1–R5) fixed in pass 2, round 2 findings (N1, N2) in pass 3, and round 3 finding N3 in pass 4. AC-19: user, Chrome, 8 of 9 items passed; item 7 accepted on automated evidence (DEC-009). CI passed for `1e132c5`, `a34e8ad`, and `cb4fc57` (reported by the user).
 
 ## Changed files
 
@@ -200,6 +200,16 @@ Fixes for round 2 of [05-task-review.md](05-task-review.md), as chosen by the us
 | N2 late sign-out reply | Sign-out reply held; a keep-alive gets 401; the user signs in again; the held reply returns 204: the shell stays | Failed: the new session's shell was replaced by the sign-in screen | `handleSignOut` captures the session generation before `signOut()` and ignores the reply if it changed | Pass |
 
 **Verification:** web suite 291 passed plus 1 expected fail, 3 consecutive runs; web `build` exit 0 with `check:build` 2/2; root `format:check`, `lint`, and `typecheck` exit 0. The API is unchanged since `a34e8ad` (140 passed in review round 2).
+
+## Review fix (implementation pass 4, 2026-11-08)
+
+Fix for round 3 of [05-task-review.md](05-task-review.md): N3, chosen by the user. The user also reported CI passing for `cb4fc57`. Starting point `cb4fc57`; changes uncommitted.
+
+| Finding | Test first | Red (observed) | Fix | Green |
+|---|---|---|---|---|
+| N3 busy Sign out button | The N2 test now also asserts that the new session's **Sign out** button is not `aria-busy` while the old sign-out request is still pending | Failed: `aria-busy="true"` on the new session's button | `enterState` also resets `signingOut` (`AuthApp.tsx`) | Pass |
+
+**Verification:** web suite 291 passed plus 1 expected fail, 3 consecutive runs; web `build` exit 0 with `check:build` 2/2; root `format:check`, `lint`, and `typecheck` exit 0. The API is unchanged.
 
 ## Simplicity check
 
