@@ -52,3 +52,54 @@ Record only material decisions or change requests. Keep pending questions visibl
 - **Decision rationale/date:** 2026-11-08.
 - **Required document/evidence updates:** `01-spec.md` dependencies; `02-implementation-plan.md`.
 - **Impact on completed work:** None.
+
+## DEC-005 — Docker Compose layout
+
+- **Raised:** 2026-11-08 (project open decision #8)
+- **Status:** Approved
+- **Options and tradeoffs:**
+  1. Full stack plus fast development: `docker compose up` runs PostgreSQL, API, and web (built app served with `/api` proxied on the same origin, like the showcase). For coding, run only PostgreSQL in Docker and web/API with npm for instant reload. CI builds both images.
+  2. PostgreSQL only in Docker; web and API always via npm. Simplest; no app containers until a deployment task.
+  3. Everything in Docker with live reload. One command, but slower and fiddly file watching on Windows.
+- **Recommendation:** Option 1.
+- **User decision:** Option 1.
+- **Decision rationale/date:** Production-like same-origin setup without slowing day-to-day work. 2026-11-08.
+- **Required document/evidence updates:** `01-spec.md` scope and criteria; `PROJECT-SETUP.md` open decision #8.
+- **Impact on completed work:** None.
+
+## DEC-006 — Sign-in rate limiting
+
+- **Raised:** 2026-11-08
+- **Status:** Approved
+- **Options and tradeoffs:**
+  1. Count failed attempts in PostgreSQL: 5 failures per email in 15 minutes, plus 20 per IP address in 15 minutes. Survives restarts and works with more than one API instance.
+  2. Same limits in API memory (NestJS throttler). Simpler; counts reset on restart and are per instance.
+- **Recommendation:** Option 1.
+- **User decision:** Option 1.
+- **Decision rationale/date:** 2026-11-08.
+- **Required document/evidence updates:** `01-spec.md` security criteria and data model.
+- **Impact on completed work:** None.
+
+## DEC-007 — Absolute session lifetime
+
+- **Raised:** 2026-11-08 (project open decision #1, partly)
+- **Status:** Approved
+- **Options and tradeoffs:** 12 hours after sign-in; 8 hours; or no maximum (only the 10-minute inactivity timeout, so an open tab can keep a session alive indefinitely).
+- **Recommendation:** 12 hours.
+- **User decision:** 12 hours, in addition to the 10-minute inactivity timeout.
+- **Decision rationale/date:** Limits the risk of a forgotten open tab. 2026-11-08.
+- **Required document/evidence updates:** `01-spec.md` session criteria; `PROJECT-SETUP.md` and the auth `IDEA.md` open items.
+- **Impact on completed work:** None. Refines DEC-002: an open tab keeps the session alive, up to 12 hours.
+
+## DEC-008 — Test tooling for browser behavior
+
+- **Raised:** 2026-11-08
+- **Status:** Approved
+- **Options and tradeoffs:**
+  1. Keep TASK-002 tools: API tested over real HTTP against real PostgreSQL (including cookie headers), web component tests, and a manual browser checklist for multi-tab, refresh, and real cookie handling.
+  2. Add Playwright for automated real-browser tests. Stronger evidence; adds a browser download locally and in CI.
+- **Recommendation:** Option 1.
+- **User decision:** Option 1.
+- **Decision rationale/date:** Consistent with TASK-002 (DEC-003 there); lighter setup. 2026-11-08.
+- **Required document/evidence updates:** `01-spec.md` test strategy and manual checklist.
+- **Impact on completed work:** None.
