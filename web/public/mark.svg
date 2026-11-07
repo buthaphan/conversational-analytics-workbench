@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Conversational Analytics Workbench mark</title>
+  <desc id="desc">A circular navy conversation ring with a small speech tail, surrounding three rising teal and gold analytics bars.</desc>
+  <path d="M33 82 L25 111 L50 94 Z" fill="#18324B" />
+  <path d="M92 36 A40 40 0 1 0 92 92" fill="none" stroke="#18324B" stroke-width="14" stroke-linecap="round" />
+  <rect x="40" y="70" width="12" height="18" rx="3" fill="#14A38B" />
+  <rect x="57" y="61" width="12" height="27" rx="3" fill="#14A38B" />
+  <rect x="74" y="46" width="12" height="42" rx="3" fill="#E5A93D" />
+</svg>

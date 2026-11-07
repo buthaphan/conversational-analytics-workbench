@@ -42,3 +42,28 @@ Record only material decisions or change requests. Keep pending questions visibl
 - **Decision rationale/date:** Lighter setup; visual approval is the user's review of the reference page. 2026-11-08.
 - **Required document/evidence updates:** `01-spec.md` test strategy; AC-9 is verified manually.
 - **Impact on completed work:** None.
+
+## DEC-004 — Development-only audit finding
+
+- **Raised:** 2026-11-08
+- **Status:** Approved
+- **Discovery and evidence:** `npm audit` reports 10 moderate findings, all from one `minimatch` advisory (GHSA-g3hv-75wg-m249) reached through ESLint 10 and typescript-eslint. `npm audit --omit=dev` reports 0. See [03-implementation-notes.md](03-implementation-notes.md#final-verification-run-once-from-a-clean-install).
+- **Options and tradeoffs:**
+  1. Accept for now: lint tooling only, no runtime exposure; revisit when upstream fixes ship.
+  2. `npm audit fix --force`: downgrades ESLint to 9, a breaking change to the lint setup.
+- **Recommendation:** Option 1.
+- **User decision:** Accept the finding.
+- **Decision rationale/date:** Development-only, moderate severity. 2026-11-08.
+- **Required document/evidence updates:** Implementation notes; task review and closeout list it as a known limitation.
+- **Impact on completed work:** None.
+
+## DEC-005 — Node version
+
+- **Raised:** 2026-11-08
+- **Status:** Approved
+- **Options and tradeoffs:** Keep Node 24 (installed, LTS line, verified); or move to a newer LTS (one-line change plus re-verification).
+- **Recommendation:** Keep Node 24 unless a newer LTS is needed.
+- **User decision:** Keep Node 24.
+- **Decision rationale/date:** Matches the verified local environment. 2026-11-08.
+- **Required document/evidence updates:** None (`.nvmrc` already `24`).
+- **Impact on completed work:** None.

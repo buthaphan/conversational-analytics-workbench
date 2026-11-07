@@ -1,0 +1,29 @@
+# Checks only: no secrets, cloud credentials, Docker, or deployment (see docs/PROJECT-SETUP.md).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      # Builds web/dist, then checks it (bundled font, no external hosts, no reference page).
+      - run: npm run build
