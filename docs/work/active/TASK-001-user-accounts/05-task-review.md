@@ -1,5 +1,9 @@
 # Task review: TASK-001 User accounts and sign-in
 
+This file keeps every review round. **Round 2 (current) is at the end.**
+
+---
+
 **Review round:** 1  
 **Reviewed revision:** `1e132c5` on `feature/TASK-001-user-accounts` (base `93d8d5a`), plus the uncommitted CI-result note in `03-implementation-notes.md`. Reviewed 2026-11-08.  
 **Spec revision:** 1 (approved 2026-11-08)
@@ -78,5 +82,68 @@ After the fixes:
 1. Run `/task-review` again.
 2. The user decides AC-19 item 7 (run the 5-minute check, or accept automated evidence only).
 3. Closeout.
+
+No requirement appears infeasible or ambiguous, so no decision-log entry is needed.
+
+---
+
+# Review round 2
+
+**Reviewed revision:** `a34e8ad` (fixes for round 1), diffed against `d9664b3`. Reviewed 2026-11-08.
+
+**Method:**
+- The same separate reviewer re-read the round-1 fixes and the changed files, again without access to the implementation notes.
+- I re-checked its findings against the code (`AuthApp.tsx:44`, `:74`, `:77`).
+- Re-ran `npm test`: web 289 passed plus 1 expected fail; API 140 passed; exit 0. Working tree clean apart from the user's own untracked `docs/product/…txt`.
+- Live checks:
+  - **Rate limit, through nginx after the rebuild** (recorded by implementation and consistent with the code): 30 simultaneous wrong guesses gave 4 × 401 and 26 × 429.
+  - **Development mode, done in this review:** the built API and `npm run dev` gave health 200, sign-in 200, session 200, and sign-out 204 through the Vite proxy. The API was listening only on `127.0.0.1:3000` (netstat). A failed sign-in sent with `X-Forwarded-For: 203.0.113.9` was recorded with client IP `127.0.0.1`.
+
+## Round-1 findings: re-verification
+
+| # | Status | Evidence |
+|---|---|---|
+| R1 rate-limit race (blocking) | **Fixed** | `RateLimiter.reserve` inserts the attempt, then counts including it, and proceeds only within the limit (`rate-limiter.ts`, `auth.service.ts`). Reasoning checked under READ COMMITTED: of any two requests that pass, the one that counts later sees the other's row, so at most 5 per email (20 per IP) can pass. A blocked request deletes only its own row; the IP count spans all emails. Tests: 30 simultaneous (real `verify`) allow at most 5 checks; 40 simultaneous from one IP allow at most 20; blocked attempts do not extend the block. The live probe agrees. A burst may block more than strictly needed (safe). Stubbing the dummy check in the rate-limit tests does not weaken AC-10 (it counts attempts), and AC-4's dummy-check test in `auth.http.test.ts` is unstubbed. |
+| R2 weak tests | **Fixed** | Concurrent sign-ins must all return 200 with a cookie; malformed-hash cases carry a valid salt and key; the 254/255 boundary is tested directly; the fetch mock fails tests on unlisted requests (proven by `it.fails`) |
+| R3 hash parsing | **Fixed** | `isSafeScryptParams` (whole numbers, N a power of two, p ≤ 16, 128·N·r ≤ 256 MiB); `verifyPassword` returns `false` on any `scrypt` error; NaN cases were red first |
+| R4 dev IP spoofing | **Fixed** | Vite proxy strips `X-Forwarded-For`; API listens on `127.0.0.1` by default; the image sets `0.0.0.0`. Verified live (above), including the `localhost`→IPv4 fallback the reviewer flagged as untested. |
+| R5 late keep-alive | **Fixed** (reported cases) | Generation counter; both race tests were red first. Two remaining paths are N1 and N2 below. |
+| S2 cleanup-failure sign-in | **Covered** | `cleanup-failure.http.test.ts`: generic 500, no new cookie, old token rejected, one row marked `replaced`, sign-in works after the sweep |
+| S1, S3, S4 | Recorded | S1 (TASK-003 handover) is in the notes; S3 (shared IP counter in Compose) and S4 (CSP, test speed) remain suggestions |
+
+## Findings (round 2)
+
+| # | Severity | Finding | Location | Required action |
+|---|---|---|---|---|
+| N1 | Low | **A stale "Could not sign out. Try again." can reappear after the next sign-in.** `signOutFailed` is reset only when a new sign-out starts (`:74`), not when the app changes state. Scenario: sign-out fails (network); a keep-alive then gets 401 and shows the sign-in screen; after signing in again, the shell still shows the old error. This bug predates round 1 but was not reported then. | `web/src/auth/AuthApp.tsx:25`, `:44`, `:74-78` | Reset `signOutFailed` in `enterState`, with a test. |
+| N2 | Low | **A late sign-out reply can hide a new session.** The sign-out result is applied without the generation check (`:77`). Scenario: sign-out hangs; a keep-alive 401 shows the sign-in screen; the user signs in again; the old sign-out then returns OK and shows the sign-in screen, although the new server session is valid. The timing is unlikely, and a refresh restores the shell. | `web/src/auth/AuthApp.tsx:77` | Capture the generation before `signOut()` and ignore the result if it changed, with a test. |
+| — | Note | The concurrent rate-limit tests check upper bounds only, so a version that blocked everything would also pass them. The sequential tests ("allows sign-in after 4 failures", "lifts the block…") cover the lower bound. | `rate-limit.http.test.ts` | None required. |
+
+No blocking defects. No security issue remains open in scope.
+
+## Acceptance criteria (round 2)
+
+| Criterion | Status | Evidence or gap |
+|---|---|---|
+| AC-1 | met | Tests re-run (exit 0); development mode verified live through the Vite proxy with the new `127.0.0.1` binding |
+| AC-2 | met | Unchanged since round 1 |
+| AC-3 | met | R3 fixed and tested |
+| AC-4 | met | 254/255 boundary tested directly; dummy check still proven |
+| AC-5 | met | Concurrent test now requires all 200s; replaced-session and cleanup-failure (S2) tests |
+| AC-6 to AC-9 | met | Unchanged; S2 adds evidence for AC-9 |
+| AC-10 | met | R1 fixed: simultaneous tests and live probe; sequential window and `Retry-After` tests unchanged |
+| AC-11 | met | Unchanged, plus R4 closes development-mode IP spoofing |
+| AC-12, AC-13 | met | Unchanged |
+| AC-14 | met | R5 fixed. N1 and N2 are low-severity edge cases in the same component; they do not contradict AC-14's stated behavior. |
+| AC-15, AC-16, AC-18 | met | Unchanged; Compose rebuilt and healthy after the fixes |
+| AC-17 | met | Unchanged workflow; the GitHub run for `a34e8ad` was not yet reported when this review was written. The previous run (`1e132c5`) passed. |
+| AC-19 | **unverified** (1 item) | 8 of 9 passed (user, Chrome). Item 7 (closed tab ends after a shortened idle timeout) was skipped. **User decision:** run it, or accept the automated evidence (AC-6, AC-9). |
+
+## Recommendation (round 2)
+
+**Pending user decision, then closeout.** Nothing blocks the task. Before closeout the user decides:
+1. **N1 and N2:** fix them now (a small `/implementation` pass with tests, then a short re-check), or accept them as known low-severity limitations.
+2. **AC-19 item 7:** run the 5-minute manual check, or accept the automated evidence.
+3. **CI:** report the GitHub Actions result for `a34e8ad`.
 
 No requirement appears infeasible or ambiguous, so no decision-log entry is needed.

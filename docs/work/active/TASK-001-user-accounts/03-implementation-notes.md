@@ -3,7 +3,7 @@
 **Spec revision:** 1 (approved 2026-11-08)  
 **Plan:** [02-implementation-plan.md](02-implementation-plan.md)  
 **Branch:** `feature/TASK-001-user-accounts` (started from `93d8d5a`; implementation committed by the user in `1e132c5`)  
-**Status:** All 20 plan steps done, and review round 1 findings R1–R5 fixed (see "Review fixes (implementation pass 2)"). The manual browser check (AC-19) was done by the user in Chrome on 2026-11-08: 8 of 9 items passed and the idle-timeout item was skipped. Ready for `/task-review` round 2.
+**Status:** All 20 plan steps done. Review round 1 findings (R1–R5) fixed in pass 2, round 2 findings (N1, N2) fixed in pass 3. AC-19: user, Chrome, 8 of 9 items passed; item 7 accepted on automated evidence (DEC-009). Ready for a short `/task-review` re-check of N1 and N2, then closeout.
 
 ## Changed files
 
@@ -107,7 +107,7 @@ The API test output includes four `ERROR [SessionStore]`/sweeper log lines. They
 | AC-16 | Met | Compose run recorded above |
 | AC-17 | Met | Workflow: Node from `.nvmrc`, PostgreSQL service with placeholder credentials, generate, format, lint, typecheck, test, build, and an `images` job that builds both images without pushing; `contents: read`; no secrets. The GitHub Actions run for `feature/TASK-001-user-accounts` at `1e132c5` passed both jobs (reported by the user, 2026-11-08). |
 | AC-18 | Met | README (current stage, Run locally), `PROJECT-SETUP.md` (#1 partly, #8, decision rows), auth `IDEA.md`, commented `example.env` |
-| AC-19 | **Met except one item** (user, Chrome, 2026-11-08) | 8 of 9 checklist items passed. Item 7 (a closed tab's session ends with a shortened idle timeout) was skipped by the user; that behavior has automated evidence only (AC-6, AC-9). Accepting this is a review/closeout decision. |
+| AC-19 | **Met, with one item accepted on automated evidence** (user, Chrome, 2026-11-08) | 8 of 9 checklist items passed. Item 7 (a closed tab's session ends with a shortened idle timeout) was skipped; the user accepted the automated evidence (AC-6, AC-9) for it ([DEC-009](DECISION-LOG.md#dec-009--ac-19-idle-timeout-manual-check)). |
 
 ## Deviations and decisions within scope
 
@@ -186,7 +186,20 @@ Fixes for round 1 of [05-task-review.md](05-task-review.md): R1 (blocking) and R
 
 The extra `ERROR` lines in the API output come from tests that make cleanup fail on purpose (the new S2 tests add some, because sign-in retries five times).
 
+**CI:** the GitHub Actions run for `a34e8ad` passed (reported by the user, 2026-11-08).
+
 **Criteria affected:** AC-10 is now met (R1; tested and probed live). AC-3 is now met (R3). The evidence for AC-4 and AC-5 is stronger (R2). AC-11 is unchanged, but development-mode IP spoofing is closed (R4). AC-14 is unchanged, but the late-401 race is fixed (R5). AC-19 item 7 still awaits the user's decision.
+
+## Review fixes (implementation pass 3, 2026-11-08)
+
+Fixes for round 2 of [05-task-review.md](05-task-review.md), as chosen by the user: N1 and N2. In the same decision the user accepted AC-19 item 7 on automated evidence ([DEC-009](DECISION-LOG.md#dec-009--ac-19-idle-timeout-manual-check)) and reported CI passing for `a34e8ad`. Starting point `a34e8ad`; changes uncommitted.
+
+| Finding | Test first (`AuthApp.test.tsx`) | Red (observed) | Fix (`AuthApp.tsx`) | Green |
+|---|---|---|---|---|
+| N1 stale sign-out error | Sign-out fails (network), a keep-alive gets 401, the user signs in again: no "Could not sign out" message | Failed: the old error was still shown after signing in again | `enterState` resets `signOutFailed` on every state change | Pass |
+| N2 late sign-out reply | Sign-out reply held; a keep-alive gets 401; the user signs in again; the held reply returns 204: the shell stays | Failed: the new session's shell was replaced by the sign-in screen | `handleSignOut` captures the session generation before `signOut()` and ignores the reply if it changed | Pass |
+
+**Verification:** web suite 291 passed plus 1 expected fail, 3 consecutive runs; web `build` exit 0 with `check:build` 2/2; root `format:check`, `lint`, and `typecheck` exit 0. The API is unchanged since `a34e8ad` (140 passed in review round 2).
 
 ## Simplicity check
 

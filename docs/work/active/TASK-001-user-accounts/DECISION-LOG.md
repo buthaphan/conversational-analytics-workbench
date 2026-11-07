@@ -103,3 +103,18 @@ Record only material decisions or change requests. Keep pending questions visibl
 - **Decision rationale/date:** Consistent with TASK-002 (DEC-003 there); lighter setup. 2026-11-08.
 - **Required document/evidence updates:** `01-spec.md` test strategy and manual checklist.
 - **Impact on completed work:** None.
+
+## DEC-009 — AC-19 idle-timeout manual check
+
+- **Raised:** 2026-11-08 (task review rounds 1 and 2)
+- **Status:** Approved
+- **Discovery and evidence:** The user ran the AC-19 manual browser checklist in Chrome; 8 of 9 items passed. Item 7 (with a shortened idle timeout, a closed tab's session ends) was skipped. The behavior has automated evidence: the AC-6 boundary tests (10 minutes rejected, activity extends) and the AC-9 sweep tests (idle sessions ended within 60 seconds, cleanup retried).
+- **Affected scope/criteria/files:** AC-19.
+- **Options and tradeoffs:**
+  1. Run item 7 (about 5 minutes, with a temporary `.env` change) for real-browser evidence.
+  2. Accept the automated evidence for this item. Real browser timer and close behavior is not observed manually.
+- **Recommendation:** Either is reasonable; the logic is fully tested with a controllable clock.
+- **User decision:** Option 2: accept the automated evidence.
+- **Decision rationale/date:** 2026-11-08.
+- **Required document/evidence updates:** `03-implementation-notes.md` AC-19 row; closeout records AC-19 as met with this accepted gap.
+- **Impact on completed work:** None.

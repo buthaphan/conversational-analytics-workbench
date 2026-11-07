@@ -178,6 +178,71 @@ describe("signed-in shell and session end (AC-14)", () => {
     });
   });
 
+  describe("sign-out edge cases (review round 2)", () => {
+    /** Scripted replies: session checks answer in order; sign-out and sign-in use the given handlers. */
+    function scripted(options: { sessions: number[]; signOut: () => Promise<Response> }) {
+      let sessionIndex = 0;
+      const reply = (status: number, body?: unknown) =>
+        new Response(body === undefined ? null : JSON.stringify(body), { status });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const key = `${(init?.method ?? "GET").toUpperCase()} ${String(input)}`;
+          if (key === "GET /api/auth/session") {
+            const status = options.sessions[Math.min(sessionIndex++, options.sessions.length - 1)]!;
+            return status === 200 ? reply(200, { user }) : reply(status, {});
+          }
+          if (key === "POST /api/auth/sign-out") return options.signOut();
+          if (key === "POST /api/auth/sign-in") return reply(200, { user });
+          throw new Error(`Unexpected request: ${key}`);
+        }),
+      );
+    }
+
+    async function signInAgain(u: ReturnType<typeof userEvent.setup>) {
+      await u.type(await screen.findByLabelText(/^Email/), "user@example.test");
+      await u.type(screen.getByLabelText(/^Password/), "123456");
+      await u.click(screen.getByRole("button", { name: "Sign in" }));
+      await screen.findByRole("button", { name: "Sign out" });
+    }
+
+    it("N1: does not show an old sign-out error after the user signs in again", async () => {
+      scripted({
+        sessions: [200, 401, 200],
+        signOut: async () => {
+          throw new TypeError("Failed to fetch");
+        },
+      });
+      render(<AuthApp />);
+      const u = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await u.click(await screen.findByRole("button", { name: "Sign out" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign out. Try again.");
+      await advance(2 * minute); // keep-alive gets 401: back to sign-in
+      await signInAgain(u);
+      expect(screen.queryByText("Could not sign out. Try again.")).not.toBeInTheDocument();
+    });
+
+    it("N2: ignores a sign-out reply that arrives after the user signed in again", async () => {
+      let releaseSignOut: () => void = () => {};
+      scripted({
+        sessions: [200, 401, 200],
+        signOut: () =>
+          new Promise<Response>((resolve) => {
+            releaseSignOut = () => resolve(new Response(null, { status: 204 }));
+          }),
+      });
+      render(<AuthApp />);
+      const u = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await u.click(await screen.findByRole("button", { name: "Sign out" })); // reply held
+      await advance(2 * minute); // keep-alive gets 401: back to sign-in
+      await signInAgain(u);
+      await act(async () => releaseSignOut());
+      await advance(0);
+      expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Sign in" })).not.toBeInTheDocument();
+    });
+  });
+
   it("moves from sign-in to the shell after a successful sign-in", async () => {
     mockFetch({
       "GET /api/auth/session": { status: 401, body: {} },
