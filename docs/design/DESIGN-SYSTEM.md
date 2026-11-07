@@ -1,6 +1,6 @@
 # Design system
 
-**Status:** Implemented in TASK-002; visual approval by the user is pending (TASK-002 AC-13).  
+**Status:** Implemented in TASK-002; visual design approved by the user on 2026-11-08 (TASK-002 AC-13).  
 **Source of truth for values:** [`web/src/styles/tokens.css`](../../web/src/styles/tokens.css). Tests read the same file, so this page lists decisions and rules rather than repeating every value.  
 **Review it live:** run `npm run dev` and open the development-only design reference page.
 
@@ -80,7 +80,7 @@ Built in the shadcn style: source lives in `web/src/components/ui/`, styled with
 
 - **Library:** Apache ECharts via `echarts-for-react`, with the `cawb` theme (`web/src/charts/chartTheme.ts`) built only from tokens.
 - **Always use `ChartWithTable`.** It renders the chart plus a table of the exact charted values, a figure caption, and a text alternative pointing to the table.
-- **Categorical palette** (`chart-1` to `chart-6`): blue, teal, amber, crimson, plum, mauve. Each is at least 3:1 on `surface`. Every pair differs by at least 15 (CIEDE2000) in normal vision and at least 8 under simulated protanopia, deuteranopia, and tritanopia (tested). Use at most six series; beyond that, group or filter.
+- **Categorical palette** (`chart-1` to `chart-6`): blue, teal, amber, crimson, plum, mauve. Each is at least 3:1 on `surface` and on `canvas`. Every pair differs by at least 15 (CIEDE2000) in normal vision and at least 8 under simulated protanopia, deuteranopia, and tritanopia (tested). Use at most six series; beyond that, group or filter.
 - **Sequential** (`seq-1` to `seq-5`): light to dark, ending at brand navy, for ordered magnitudes.
 - **Diverging** (`div-1` to `div-5`): crimson to blue around a neutral grey midpoint, for values above and below a baseline.
 - Chart text (axis labels, legend, tooltip) meets 4.5:1.
@@ -102,6 +102,14 @@ Other components should need no changes.
 - All declared pairings meet AA, including every combination components actually use (`tokens.test.ts`); palette contrast on `surface` and `canvas` and distinguishability (`chartPalette.test.ts`).
 - Every color token has a documented role (`tokenRoles.test.ts`), shown on the reference page.
 - The production build (`npm run build` runs `check:build`): bundles the font; defines every declared `--color-*` variable; loads no external stylesheet, script, font, or `url()` resource (including protocol-relative URLs); and excludes the reference page.
+
+## Open design choices
+
+Everything above is decided. These items are deliberately left for later tasks:
+
+- **Dark-mode values:** the structure is ready (see "Dark mode (later)"); the colors, their contrast checks, and a dark chart theme are not chosen yet.
+- **More components:** dialog, select, tabs, menus, and toasts are added when a feature needs them. Add Radix (and optionally the shadcn CLI) at that point for accessible behavior, rather than building it by hand.
+- **Chart bundle size:** ECharts is not in the production bundle yet. When a feature first ships a chart, import from `echarts/core` with only the needed chart types instead of the full package.
 
 ## Selected logo
 

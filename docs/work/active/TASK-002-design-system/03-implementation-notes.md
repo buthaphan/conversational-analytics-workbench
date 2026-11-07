@@ -2,8 +2,8 @@
 
 **Spec revision:** 1 (approved 2026-11-08)  
 **Plan:** [02-implementation-plan.md](02-implementation-plan.md)  
-**Branch:** `feature/TASK-002-design-system` (started from `381f8ec`; all changes uncommitted)  
-**Status:** Steps 1–15 implemented with tests. Step 16 (manual accessibility check AC-9 and visual approval AC-13) is **waiting on the user**.
+**Branch:** `feature/TASK-002-design-system` (started from `381f8ec`; steps 1–15 and review round 1 fixes committed by the user in `7acff88`; review round 2 fixes uncommitted)  
+**Status:** Steps 1–15 implemented with tests; review rounds 1 and 2 fixed (see the sections at the end). Step 16 done: the user passed the AC-9 manual accessibility check and approved the visual design (AC-13) on 2026-11-08. R3 resolved by adding an "Open design choices" section to `DESIGN-SYSTEM.md` (user decision, 2026-11-08).
 
 ## Changed files
 
@@ -77,17 +77,17 @@ The full test suite was also run twice consecutively before the clean install (b
 | AC-6 | Met | `colorLiterals.test.ts` scans all non-test sources; only `styles/tokens.css` may contain literals |
 | AC-7 | Met | Component tests for behavior and ARIA plus axe with no violations for every component and state |
 | AC-8 | Met | `chartPalette.test.ts`, `chartTheme.test.ts`, `ChartWithTable.test.tsx` (table equals data, empty state, length mismatch rejected, legend text) |
-| AC-9 | **Unverified — manual, needs the user** | Checklist below |
+| AC-9 | Met (user, Chrome, 2026-11-08) | Checklist below: all five checks passed |
 | AC-10 | Met | `ReferencePage.test.tsx`; production build check proves exclusion (red/green recorded in step 13) |
 | AC-11 | Implemented; GitHub run **unverified** | `.github/workflows/ci.yml` inspected against the spec: Node from `.nvmrc`, `npm ci`, format, lint, typecheck, test, build; `permissions: contents: read`; no secrets, AWS, Docker, or deploy. Runs only after the user pushes. |
 | AC-12 | Met | `docs/design/DESIGN-SYSTEM.md` rewritten |
-| AC-13 | **Pending user approval** | Run `npm run dev` and review the reference page |
+| AC-13 | **Approved by the user, 2026-11-08** | The user reviewed the reference page and reported "all is good" |
 
 ## Deviations and decisions within scope
 
 - **Vitest CSS handling:** `css: { include: [/tokens\.css/] }` instead of `css: false`, so the token file is real text in tests (otherwise the `?raw` import is blank). Other CSS stays stubbed.
 - **axe `color-contrast` rule disabled in the test helper.** The simulated DOM cannot compute contrast (axe reports it as incomplete and logs canvas errors). Contrast is covered by AC-3's pairing tests and AC-9's manual check. All other axe rules run.
-- **`App.test.tsx` lazy-load wait raised to 5 s** for one `findByRole`. Under full-suite parallel load the lazy import took over 3 s and exceeded the 1 s default. The assertion is unchanged.
+- **`App.test.tsx` lazy-load wait:** superseded in review round 2 (R1). Originally the wait was raised to 5 s, which matched Vitest's default 5 s test timeout and so could not help. The test now mocks `echarts`, waits up to 10 s, and has a 15 s test timeout. The assertion is unchanged.
 - **Build check wiring:** `web` `build` = `vite build && npm run check:build`, so CI and local builds both enforce AC-4 and AC-10.
 - **File-reading tests** use `// @vitest-environment node`.
 - **Docs rule added:** at most six chart series (the categorical palette size). Group or filter beyond that.
@@ -107,14 +107,15 @@ Run `npm run dev` and open the printed local URL (usually `http://localhost:5173
 
 | # | Check | Result (fill in) |
 |---|---|---|
-| 1 | Press Tab from the top: every button, input, and table region is reached in a logical order, each with a visible teal focus outline | |
-| 2 | Shift+Tab moves backwards the same way; nothing traps focus | |
-| 3 | Narrow the window (or device toolbar) to 320 px wide: no sideways page scroll; tables scroll inside their own box | |
-| 4 | Zoom to 200%: text and controls remain readable and usable | |
-| 5 | Turn on "reduce motion" (Windows: Settings > Accessibility > Visual effects > Animation effects off): spinners stop rotating | |
-| 6 | Visual review: colors, type, spacing, components, and the chart look right to you | Approve / changes requested |
+| 1 | Press Tab from the top: every button, input, and table region is reached in a logical order, each with a visible teal focus outline | Pass (user) |
+| 2 | Shift+Tab moves backwards the same way; nothing traps focus | Pass (user) |
+| 3 | Narrow the window (or device toolbar) to 320 px wide: no sideways page scroll; tables scroll inside their own box | Pass (user) |
+| 4 | Zoom to 200%: text and controls remain readable and usable | Pass (user) |
+| 5 | Turn on "reduce motion" (Windows: Settings > Accessibility > Visual effects > Animation effects off): spinners stop rotating | Pass (user) |
+| 6 | Visual review: colors, type, spacing, components, and the chart look right to you | **Approved** by the user, 2026-11-08 ("all is good") |
 
-Browser used: ______  Date: ______
+Browser used: Chrome (current desktop version)  Date: 2026-11-08  
+Checks performed by the user; results reported to Claude and recorded here with the user.
 
 ## Review fixes (implementation pass 2, 2026-11-08)
 
@@ -148,10 +149,37 @@ Two fixes were needed in my own code during the cycle: the widened guard flagged
 | `npm test` | exit 0, 18 files, 249 tests passed |
 | `npm run build` | exit 0; `check:build` 2/2 (font, all 47 color variables defined, no external references, no reference page) |
 
+## Review fixes (implementation pass 3, 2026-11-08)
+
+Fixes for round 2 of [05-task-review.md](05-task-review.md): R1 (blocking), R2, and R4. **R3 (removed "Open design choices" section) needs the user's decision and is not changed.** S1–S3 remain open suggestions.
+
+**R1: flaky `npm test`.**
+
+- **Red (observed):** the task review saw 2 of 6 full-suite runs fail, plus 1 failure in its first run (3 of 8 in total). Each time it was `App.test.tsx > shows the design reference in development: Test timed out in 5000ms`.
+- **Diagnosis:** the `findByRole` wait (5000 ms) equalled Vitest's default per-test timeout (5000 ms), so Vitest stopped the test before the wait could finish. Most of the lazy page's load time was the real `echarts` package. `ChartWithTable` imports `registerTheme` from it, and the test mocked only `echarts-for-react`. Measured with the test run alone: 932 ms with the real `echarts`, 334 ms with it mocked.
+- **Fix (test only; no production change):** `App.test.tsx` also mocks `echarts`. The wait is now 10 s, under an explicit 15 s test timeout. The assertion is unchanged.
+- **Green:** 10 consecutive full-suite runs, all exit 0 with 249/249. In a verbose full-suite run the test took 653 ms.
+
+**R2:** header, status, and the superseded deviation bullet updated (above).
+
+**R4:** `DESIGN-SYSTEM.md` now says the categorical colors are at least 3:1 on `surface` and on `canvas`. The `ci.yml` build-step comment now mentions the color-variable check.
+
+**Verification after the fixes** (current install; dependencies unchanged):
+
+| Command | Result |
+|---|---|
+| `npm run format:check` | exit 0 |
+| `npm run lint` | exit 0 |
+| `npm run typecheck` | exit 0 |
+| `npm test` | exit 0, 18 files, 249 tests passed (plus the 10 repeated runs above) |
+| `npm run build` | exit 0; `check:build` 2/2 |
+
+**Criteria:** AC-1 is now reliably met (the R1 cause is removed, with repeated-run evidence). No other criterion's evidence changed. AC-9 and AC-13 are still waiting on the user.
+
 ## Simplicity check
 
 No meaningful complexity, duplication, or coupling concern. Tokens have one source (`tokens.css`) read by both Tailwind and TypeScript. Components are small and independent. `ReferencePage.tsx` is the longest file, but it is a flat showcase of sections. No `/code-simplicity` stage needed.
 
 ## Handoff
 
-After AC-9 and AC-13 are recorded: `/task-review`.
+AC-9 and AC-13 are recorded, and R3 is resolved. The round-3 review ([05-task-review.md](05-task-review.md)) found no remaining implementation work, so the next step is closeout (`06-closeout.md`) with the user.

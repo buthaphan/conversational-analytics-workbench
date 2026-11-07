@@ -25,5 +25,6 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      # Builds web/dist, then checks it (bundled font, no external hosts, no reference page).
+      # Builds web/dist, then checks it (bundled font, every color variable defined,
+      # no external references, no reference page).
       - run: npm run build
