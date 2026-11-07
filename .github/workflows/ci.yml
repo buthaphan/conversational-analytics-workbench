@@ -1,4 +1,4 @@
-# Checks only: no secrets, cloud credentials, Docker, or deployment (see docs/PROJECT-SETUP.md).
+# Checks only: no secrets, cloud credentials, image publishing, or deployment (see docs/PROJECT-SETUP.md).
 name: CI
 
 on:
@@ -9,9 +9,29 @@ permissions:
   contents: read
 
 jobs:
-  web:
+  checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    services:
+      # Throwaway database for the API tests. The credentials are placeholders, not secrets.
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_USER: cawb
+          POSTGRES_PASSWORD: ci-placeholder
+          POSTGRES_DB: cawb_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cawb -d cawb_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      # API tests migrate and use this database (its name must end in "_test").
+      TEST_DATABASE_URL: postgresql://cawb:ci-placeholder@localhost:5432/cawb_test
+      # Prisma's config needs a URL even for client generation.
+      DATABASE_URL: postgresql://cawb:ci-placeholder@localhost:5432/cawb_test
     steps:
       - uses: actions/checkout@v4
 
@@ -21,10 +41,22 @@ jobs:
           cache: npm
 
       - run: npm ci
+      # Generates the Prisma client the API code imports.
+      - run: npm run db:generate -w api
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
+      # Web and API tests; the API tests run against the PostgreSQL service above.
       - run: npm test
-      # Builds web/dist, then checks it (bundled font, every color variable defined,
-      # no external references, no reference page).
+      # Builds both workspaces; the web build also checks web/dist (bundled font, every color
+      # variable defined, no external references, no reference page).
       - run: npm run build
+
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      # Build only; images are never pushed anywhere.
+      - run: docker build --file api/Dockerfile --tag cawb-api:ci .
+      - run: docker build --file web/Dockerfile --tag cawb-web:ci .

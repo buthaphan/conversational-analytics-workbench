@@ -1,0 +1,53 @@
+// Database schema for users, authentication sessions, and sign-in attempts (TASK-001 AC-2).
+// Connection settings live in prisma.config.ts and the driver adapter, not here (Prisma 7).
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String       @id @default(uuid()) @db.Uuid
+  /// Always stored trimmed and lowercase; a CHECK constraint enforces lowercase.
+  email        String       @unique
+  passwordHash String       @map("password_hash")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  session      AuthSession?
+
+  @@map("users")
+}
+
+/// At most one row per user (unique user_id). Only a SHA-256 hash of the token is stored.
+model AuthSession {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @unique @map("user_id") @db.Uuid
+  tokenHash      String    @unique @map("token_hash")
+  createdAt      DateTime  @map("created_at") @db.Timestamptz(3)
+  lastActivityAt DateTime  @map("last_activity_at") @db.Timestamptz(3)
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(3)
+  /// Set when the session ends; the token is rejected from then on, even before cleanup finishes.
+  endedAt        DateTime? @map("ended_at") @db.Timestamptz(3)
+  endReason      String?   @map("end_reason")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([endedAt])
+  @@index([lastActivityAt])
+  @@map("auth_sessions")
+}
+
+/// Failed sign-in attempts, kept at most 24 hours (rate limiting, DEC-006).
+model SignInAttempt {
+  id          BigInt   @id @default(autoincrement())
+  email       String
+  clientIp    String   @map("client_ip")
+  attemptedAt DateTime @map("attempted_at") @db.Timestamptz(3)
+
+  @@index([email, attemptedAt])
+  @@index([clientIp, attemptedAt])
+  @@map("sign_in_attempts")
+}

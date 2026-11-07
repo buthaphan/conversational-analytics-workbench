@@ -38,7 +38,7 @@
 - Application and analysis-session state: PostgreSQL.
 - Analytical source: BigQuery public TheLook e-commerce dataset.
 - AI: Claude through Amazon Bedrock is the current direction; model choice, prompt/data boundaries, credentials, and cost controls must be detailed in the relevant spec.
-- Local development: Docker Compose with clearly separated web, API, and supporting services. Exact service layout is to be specified before implementation.
+- Local development: Docker Compose with separate `postgres`, `api`, and `web` services (layout decided in TASK-001 DEC-005; see the decisions table).
 - CI: GitHub Actions for formatting/lint, type checking, tests, production builds, and container builds. No AWS credentials or deployment steps in CI.
 - Development and showcase: local development; AWS showcase manually started and stopped by the user. Exact AWS services and spend controls remain open.
 - Testing: TDD; the specification defines the test plan and measurable Definition of Done. During an approved implementation, ordinary local test runs are authorized; ask before installs, network use, external services, or costs.
@@ -70,14 +70,14 @@
 
 ## Open decisions
 
-1. Any absolute session lifetime beyond the 10-minute inactivity timeout; showcase account provisioning on AWS; whether accounts themselves expire; password recovery.
+1. Showcase account provisioning on AWS; whether accounts themselves expire; password recovery. (Absolute session lifetime decided: 12 hours, TASK-001 DEC-007.)
 2. Maximum active result-set size and behavior when a complete result exceeds that limit. Never silently truncate results; determine the limit after profiling. (Decided: a capability's `limit` controls displayed/ranked rows from the stored result, not how much is retrieved.)
 3. BigQuery access path, query limits, data freshness/caching, dataset date anchor, and local development strategy. The public dataset can be queried through the no-charge BigQuery sandbox with feature limits; billing may be needed beyond that. Verify requirements in the data-access task.
 4. Bedrock model, prompt design, response schema, which values are sent, privacy boundary, quotas, and cost controls. Document separate Google and AWS runtime credentials.
 5. How narrative text is generated while exact figures remain grounded in validated results.
 6. Whether voice input is included in a later milestone and where audio/transcripts would be processed. Recommendation: defer until privacy and data flow are explicit.
 7. Whether chart changes use both natural-language requests and direct UI controls.
-8. Exact Docker service layout and local dependency setup.
+8. ~~Exact Docker service layout and local dependency setup.~~ Decided in TASK-001 (DEC-005): see the table below.
 9. AWS hosting topology, manual run/stop procedure, and budget guardrails.
 10. Final design tokens, chart palette, typography, responsive breakpoints, and light/dark mode (TASK-002 design system).
 11. Milestone 1 acceptance criteria and task sequence after TASK-002 and TASK-001.
@@ -98,4 +98,7 @@
 | TASK-002 scope | Design system, accepted 2026-11-08: minimal web skeleton (React, Vite, TypeScript, Tailwind), light-mode role-named tokens (dark-ready), chart palette and ECharts theme, starter components, reference page. Branch `feature/TASK-002-design-system`. |
 | Task order | TASK-002 design system runs first; TASK-001 specification resumes after it; the `customer_spending` slice is proposed as TASK-003. Task numbers are IDs, not order. |
 | Local account | Seed `user@example.test` / `123456` for local development and tests only; never in the AWS showcase. |
+| Session lifetime | 10-minute inactivity timeout (any open tab keeps the session alive) and a 12-hour maximum after sign-in (TASK-001 DEC-002, DEC-007). |
+| Docker layout | `compose.yaml`: `postgres` (18.6), `api` (NestJS; migrates on start; not published to the host), and `web` (nginx serving the build and proxying `/api` on the same origin, `127.0.0.1:8080`). Day-to-day development runs only `postgres` in Docker, with web and API via npm (TASK-001 DEC-005). |
+| Sign-in rate limit | 5 failures per email and 20 per client IP within 15 minutes, counted in PostgreSQL (TASK-001 DEC-006). |
 | Review skill name | Project review stage renamed to `/task-review` (output `05-task-review.md`) to avoid colliding with Claude Code's bundled `/code-review`. |

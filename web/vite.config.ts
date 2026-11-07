@@ -4,6 +4,13 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    // Development: the browser talks only to Vite's origin; /api goes to the API (npm run dev -w api).
+    // Same origin keeps the SameSite=Strict session cookie and the API's Origin check working.
+    port: 5173,
+    strictPort: true,
+    proxy: { "/api": { target: "http://localhost:3000" } },
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
