@@ -127,7 +127,10 @@ describe("auth HTTP API (AC-4 to AC-8)", () => {
     it("leaves exactly one valid session after concurrent sign-ins", async () => {
       const body = { email: "user@example.test", password: "right-password" };
       const responses = await Promise.all([signIn(body), signIn(body), signIn(body)]);
-      const tokens = responses.map((r) => sessionCookie(r)).filter(Boolean) as string[];
+      // Every request must succeed; the losers of the race retry rather than fail (review R2a).
+      expect(responses.map((r) => r.status)).toEqual([200, 200, 200]);
+      const tokens = responses.map((r) => sessionCookie(r)) as string[];
+      expect(tokens.every(Boolean)).toBe(true);
       const valid = [];
       for (const token of tokens) if ((await session(token)).status === 200) valid.push(token);
       expect(valid).toHaveLength(1);

@@ -1,17 +1,16 @@
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_ORIGIN, type TestApp, createTestApp, createUser, resetDatabase } from "../test/app";
+import { PasswordService } from "./password.service";
 
 const minute = 60 * 1000;
-// Unknown emails run a full-strength dummy scrypt check (~0.25 s each), so tests that make many such
-// attempts need more than Vitest's 5-second default.
-const MANY_ATTEMPTS_TIMEOUT_MS = 30_000;
 const LIMITED = "Too many sign-in attempts. Try again later.";
 const right = { email: "user@example.test", password: "right-password" };
 const wrong = { email: "user@example.test", password: "wrong" };
 
 describe("sign-in rate limiting (AC-10)", () => {
   let t: TestApp;
+  let dummyCheck: ReturnType<typeof vi.spyOn>;
   const signIn = (body: object, app = t) =>
     request(app.app.getHttpServer())
       .post("/api/auth/sign-in")
@@ -32,11 +31,52 @@ describe("sign-in rate limiting (AC-10)", () => {
   beforeEach(async () => {
     await resetDatabase(t.prisma);
     await createUser(t.prisma, right.email, right.password);
+    // These tests are about counting attempts. Unknown emails normally run a full-strength dummy
+    // scrypt check (its timing role is tested in auth.http.test.ts); here it answers instantly, so
+    // test duration does not depend on machine load.
+    dummyCheck = vi
+      .spyOn(t.app.get(PasswordService), "verifyAgainstDummy")
+      .mockResolvedValue(false);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("allows sign-in after 4 failures", async () => {
     await fail(4);
     expect((await signIn(right)).status).toBe(200);
+  });
+
+  describe("simultaneous attempts (review R1)", () => {
+    it("checks at most 5 passwords for one email even when 30 guesses arrive at once", async () => {
+      const verify = vi.spyOn(t.app.get(PasswordService), "verify");
+      const responses = await Promise.all(
+        Array.from({ length: 30 }, (_, i) => signIn({ ...right, password: `guess-${i}` })),
+      );
+      const statuses = responses.map((r) => r.status);
+      expect(verify.mock.calls.length).toBeLessThanOrEqual(5);
+      expect(statuses.filter((s) => s === 401).length).toBeLessThanOrEqual(5);
+      expect(statuses.filter((s) => s === 429).length).toBeGreaterThanOrEqual(25);
+      expect(statuses.every((s) => s === 401 || s === 429)).toBe(true);
+    });
+
+    it("checks at most 20 passwords from one IP even when 40 guesses for different emails arrive at once", async () => {
+      const responses = await Promise.all(
+        Array.from({ length: 40 }, (_, i) =>
+          signIn({ email: `guess${i}@example.test`, password: "x" }),
+        ),
+      );
+      expect(dummyCheck.mock.calls.length).toBeLessThanOrEqual(20);
+      expect(responses.filter((r) => r.status === 429).length).toBeGreaterThanOrEqual(20);
+    });
+
+    it("does not let blocked attempts extend the block", async () => {
+      await fail(5);
+      for (let i = 0; i < 3; i++) expect((await signIn(right)).status).toBe(429);
+      t.clock.advance(15 * minute);
+      expect((await signIn(right)).status).toBe(200);
+    });
   });
 
   it("blocks the email after 5 failures in 15 minutes, even with the correct password", async () => {
@@ -54,14 +94,11 @@ describe("sign-in rate limiting (AC-10)", () => {
     expect((await signIn(right)).status).toBe(429);
   });
 
-  it(
-    "counts failures for unknown emails too",
-    async () => {
-      await fail(5, { email: "nobody@example.test", password: "wrong" });
-      expect((await signIn({ email: "nobody@example.test", password: "x" })).status).toBe(429);
-    },
-    MANY_ATTEMPTS_TIMEOUT_MS,
-  );
+  it("counts failures for unknown emails too", async () => {
+    await fail(5, { email: "nobody@example.test", password: "wrong" });
+    expect((await signIn({ email: "nobody@example.test", password: "x" })).status).toBe(429);
+    expect(dummyCheck).toHaveBeenCalledTimes(5);
+  });
 
   it("lifts the block once the 15-minute window has passed", async () => {
     await fail(5);
@@ -88,18 +125,14 @@ describe("sign-in rate limiting (AC-10)", () => {
     );
   });
 
-  it(
-    "blocks a client IP after 20 failures in 15 minutes across emails",
-    async () => {
-      for (let i = 0; i < 20; i++) {
-        expect((await signIn({ email: `guess${i}@example.test`, password: "x" })).status).toBe(401);
-      }
-      const response = await signIn(right);
-      expect(response.status).toBe(429);
-      expect(response.body).toEqual({ message: LIMITED });
-    },
-    MANY_ATTEMPTS_TIMEOUT_MS,
-  );
+  it("blocks a client IP after 20 failures in 15 minutes across emails", async () => {
+    for (let i = 0; i < 20; i++) {
+      expect((await signIn({ email: `guess${i}@example.test`, password: "x" })).status).toBe(401);
+    }
+    const response = await signIn(right);
+    expect(response.status).toBe(429);
+    expect(response.body).toEqual({ message: LIMITED });
+  });
 
   it("keeps the limit after the API restarts", async () => {
     await fail(5);

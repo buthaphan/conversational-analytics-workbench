@@ -3,7 +3,7 @@
 **Spec revision:** 1 (approved 2026-11-08)  
 **Plan:** [02-implementation-plan.md](02-implementation-plan.md)  
 **Branch:** `feature/TASK-001-user-accounts` (started from `93d8d5a`; implementation committed by the user in `1e132c5`)  
-**Status:** All 20 plan steps done. The manual browser check (AC-19) was done by the user in Chrome on 2026-11-08: 8 of 9 items passed and the idle-timeout item was skipped. Ready for `/task-review`.
+**Status:** All 20 plan steps done, and review round 1 findings R1–R5 fixed (see "Review fixes (implementation pass 2)"). The manual browser check (AC-19) was done by the user in Chrome on 2026-11-08: 8 of 9 items passed and the idle-timeout item was skipped. Ready for `/task-review` round 2.
 
 ## Changed files
 
@@ -129,7 +129,7 @@ The API test output includes four `ERROR [SessionStore]`/sweeper log lines. They
 1. **Dependency audit:** done. Runtime 0; the development-only `minimatch` advisory remains, as accepted in TASK-002 DEC-004.
 2. **AC-19:** the idle-timeout manual item was skipped (automated evidence only). **AC-17:** the GitHub run passed at `1e132c5`.
 3. **API tests take about 60–80 s**, mostly real scrypt hashing for unknown-email checks. Acceptable for now; a test-only lower cost for the dummy hash would speed them up.
-4. **In npm development mode the API listens on all network interfaces (port 3000).** That is fine on a private machine; binding to `127.0.0.1` outside containers is a small follow-up.
+4. ~~In npm development mode the API listens on all network interfaces.~~ Fixed in pass 2 (R4): the API listens on `127.0.0.1` outside containers.
 5. **No Content-Security-Policy yet.** Worth adding with the AWS deployment task, after checking it against the production build.
 6. **One API instance** is assumed for the sweep (stated in the spec).
 7. **TASK-003 handover:** register a cleanup step with `SessionCleanupRegistry` and reference `auth_sessions` for analysis data.
@@ -153,10 +153,45 @@ Run `docker compose up --build -d`, then `docker compose exec api node dist/seed
 Browser used: Chrome (current desktop version)  Date: 2026-11-08  
 Checks performed by the user; results reported to Claude and recorded here with the user.
 
+## Review fixes (implementation pass 2, 2026-11-08)
+
+Fixes for round 1 of [05-task-review.md](05-task-review.md): R1 (blocking) and R2–R5, with S2 covered by tests and S1 recorded below. Starting point `d9664b3`; changes uncommitted.
+
+| Finding | Test first | Red (observed) | Fix | Green |
+|---|---|---|---|---|
+| R1 rate-limit race | `rate-limit.http.test.ts`: 30 simultaneous guesses for one email allow at most 5 password checks; 40 simultaneous guesses from one IP allow at most 20; blocked attempts do not extend the block | Both simultaneous tests failed (the IP test: `expected 40 to be less than or equal to 20`). The third passed on first run (sequential behavior was already correct). | `RateLimiter.reserve`: record the attempt first, then count including it, and proceed only within the limit. A blocked attempt deletes its own record; success clears the email's records; a wrong password keeps the record as the failure. | 12/12. **Live probe through nginx after rebuilding:** 30 simultaneous wrong guesses gave 4 × 401 and 26 × 429 (before the fix: 30 × 401). |
+| R1 side effect | The sequential IP test took 14 s alone (real full-strength dummy scrypt × 20 under load), so it exceeded its 30 s limit in a full run | Timed out | The rate-limit tests now stub the dummy check, because they count attempts and timing is irrelevant there. The dummy check's real behavior stays tested in `auth.http.test.ts` (AC-4). The custom timeouts were removed. | Each test under 2 s |
+| R2a concurrent sign-in | Assert all three simultaneous sign-ins return 200 with a cookie | **Passed on first run.** The behavior was correct (also seen in the live probe); only the evidence was weak. | None needed | Pass |
+| R2b malformed hashes | Every parameter case now has a valid 16-byte salt and 64-byte key; added non-numeric `r`/`p`, empty `r`, zero `r`/`p`, N=1, short salt, short key | 3 failed with `RangeError: The value of "r" is out of range… Received NaN` (this was R3) | See R3 | 25/25 |
+| R2c 254-character email | `sign-in.dto.test.ts`: a valid 254-character email is accepted; a 255-character one is rejected with `maxLength` | Built-in check: removing `@MaxLength(254)` made the 255 case fail on the first assertion. **Finding:** the `isEmail` validator also caps addresses at 254, so the limit is enforced twice; the test asserts that `maxLength` is among the reasons. | None needed | 2/2 |
+| R2d fetch mock | `fetch.test.ts`: an unlisted request fails the test (`it.fails`) | Not applicable (test infrastructure) | `mockFetch` records unexpected requests and fails the test when it finishes | Web suite 289 pass plus 1 expected fail; no existing test had hidden unexpected requests |
+| R3 hash parsing | `isSafeScryptParams` tests (memory cap, NaN, Infinity, fractions, negatives) | Function missing; NaN cases threw | `isSafeScryptParams`: whole numbers, N a power of two of at least 2, p ≤ 16, and 128·N·r ≤ 256 MiB. `verifyPassword` returns `false` on any `scrypt` error. | 25/25 |
+| R4 dev IP spoofing | `stripForwardedFor.test.ts` (header removed; wired into `vite.config.ts`); config test for `API_HOST` | Module missing; `host` undefined | Vite proxy strips `X-Forwarded-For`; the API listens on `API_HOST` (default `127.0.0.1`); the API image sets `API_HOST=0.0.0.0`; `example.env` documents it | 2/2; 18/18; Compose healthy after rebuild |
+| R5 late keep-alive | `AuthApp.test.tsx`: a held keep-alive released as 401 after sign-out, and after a new sign-in | Both failed: "You have signed out." was replaced by "Your session has ended."; the newly signed-in user was sent back to sign-in | A generation counter changes on every sign-in and sign-out; a keep-alive answer from an earlier generation is ignored | 33/33 web auth tests |
+| S2 cleanup failure | `cleanup-failure.http.test.ts`: the second sign-in gets a generic 500, the old token gets 401, only one row remains; after the sweep finishes cleanup, sign-in works again | **Passed on first run** (documents existing safe behavior) | None needed | 2/2 |
+
+**S1 (TASK-003 handover):** deleting a user cascades straight to `auth_sessions` and skips the cleanup point. TASK-003's analysis tables need their own `ON DELETE CASCADE` from `users` (or user deletion must end sessions through `SessionStore`). Cleanup steps run inside an interactive Prisma transaction with the default 5-second timeout, so they must stay fast, or the timeout must be raised explicitly.
+
+**Verification after the fixes** (current install; no new dependencies):
+
+| Command | Result |
+|---|---|
+| `npm run format:check` | exit 0 |
+| `npm run lint` | exit 0 |
+| `npm run typecheck` | exit 0 |
+| `npm test` | exit 0: web 23 files, 289 passed plus 1 expected fail; API 13 files, 140 passed |
+| `npm run build` | exit 0; web `check:build` 2/2 |
+| Repeated runs | API 4 of 4 passed (140 each); web 3 of 3 passed |
+| `docker compose up -d --build` | All three services healthy; sign-in 200, session 200, sign-out 204 through nginx; rate-limit probe as above |
+
+The extra `ERROR` lines in the API output come from tests that make cleanup fail on purpose (the new S2 tests add some, because sign-in retries five times).
+
+**Criteria affected:** AC-10 is now met (R1; tested and probed live). AC-3 is now met (R3). The evidence for AC-4 and AC-5 is stronger (R2). AC-11 is unchanged, but development-mode IP spoofing is closed (R4). AC-14 is unchanged, but the late-401 race is fixed (R5). AC-19 item 7 still awaits the user's decision.
+
 ## Simplicity check
 
 No meaningful complexity concern. Modules are small and single-purpose: the store owns session rules, the sweeper owns timing, the controller is thin, and the web app has one state machine (`AuthApp`). The longest file is `session.store.ts` (about 160 lines). No `/code-simplicity` stage is needed.
 
 ## Handoff
 
-Next: `/task-review`.
+Next: `/task-review` (round 2). No meaningful complexity concern was added in pass 2; `RateLimiter` grew one method (`reserve`).

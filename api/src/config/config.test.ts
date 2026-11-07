@@ -20,6 +20,11 @@ describe("loadConfig (AC-6, AC-11)", () => {
     });
   });
 
+  it("listens only on this computer by default; containers set API_HOST=0.0.0.0 (review R4)", () => {
+    expect(loadConfig(base).host).toBe("127.0.0.1");
+    expect(loadConfig({ ...base, API_HOST: "0.0.0.0" }).host).toBe("0.0.0.0");
+  });
+
   it("accepts a shorter idle timeout for manual testing", () => {
     expect(loadConfig({ ...base, SESSION_IDLE_TIMEOUT_SECONDS: "120" }).idleTimeoutMs).toBe(
       120_000,

@@ -12,6 +12,8 @@ export interface AppConfig {
   /** Absolute session lifetime (DEC-007). */
   maxSessionMs: number;
   port: number;
+  /** Network interface to listen on. 127.0.0.1 outside containers; the API image sets 0.0.0.0. */
+  host: string;
 }
 
 export const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
@@ -74,6 +76,7 @@ export function loadConfig(env: Env): AppConfig {
     idleTimeoutMs: parseIdleTimeout(env),
     maxSessionMs: MAX_SESSION_MS,
     port: Number(env.API_PORT || 3000),
+    host: env.API_HOST?.trim() || "127.0.0.1",
   };
 
   if (config.nodeEnv === "production") {

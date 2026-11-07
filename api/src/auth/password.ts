@@ -11,10 +11,17 @@ export const DEFAULT_SCRYPT_PARAMS: ScryptParams = { N: 2 ** 17, r: 8, p: 1 };
 
 const SALT_BYTES = 16;
 const KEY_BYTES = 64;
-// Upper bounds for parameters read back from a stored hash, so a bad value cannot exhaust memory or CPU.
-const MAX_N = 2 ** 20;
-const MAX_R = 32;
+// Limits for parameters read back from a stored hash, so a bad value cannot exhaust memory or CPU.
+// scrypt needs about 128 * N * r bytes; the defaults use 128 MiB.
+const MAX_MEMORY_BYTES = 256 * 1024 * 1024;
 const MAX_P = 16;
+
+/** True for whole-number parameters (N a power of two) that fit within the memory limit. */
+export function isSafeScryptParams({ N, r, p }: ScryptParams): boolean {
+  const wholeNumbers = [N, r, p].every((v) => Number.isSafeInteger(v) && v >= 1);
+  if (!wholeNumbers || N < 2 || !Number.isInteger(Math.log2(N)) || p > MAX_P) return false;
+  return 128 * N * r <= MAX_MEMORY_BYTES;
+}
 
 function derive(password: string, salt: Buffer, { N, r, p }: ScryptParams): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -48,8 +55,7 @@ function parseHash(hash: string): { params: ScryptParams; salt: Buffer; key: Buf
   if (parts.length !== 6 || parts[0] !== "scrypt") return null;
   const [N, r, p] = parts.slice(1, 4).map((part) => (/^\d+$/.test(part) ? Number(part) : NaN));
   if (N === undefined || r === undefined || p === undefined) return null;
-  const powerOfTwo = Number.isInteger(Math.log2(N));
-  if (!powerOfTwo || N < 2 || N > MAX_N || r < 1 || r > MAX_R || p < 1 || p > MAX_P) return null;
+  if (!isSafeScryptParams({ N, r, p })) return null;
   const salt = Buffer.from(parts[4] ?? "", "base64url");
   const key = Buffer.from(parts[5] ?? "", "base64url");
   if (salt.length !== SALT_BYTES || key.length !== KEY_BYTES) return null;
@@ -60,6 +66,11 @@ function parseHash(hash: string): { params: ScryptParams; salt: Buffer; key: Buf
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   const parsed = parseHash(hash);
   if (!parsed) return false;
-  const candidate = await derive(password, parsed.salt, parsed.params);
-  return timingSafeEqual(candidate, parsed.key);
+  try {
+    const candidate = await derive(password, parsed.salt, parsed.params);
+    return timingSafeEqual(candidate, parsed.key);
+  } catch {
+    // Any scrypt failure on a stored hash is a failed check, never a server error (review R3).
+    return false;
+  }
 }

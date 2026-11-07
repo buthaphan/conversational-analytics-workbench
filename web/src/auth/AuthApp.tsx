@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -38,14 +38,23 @@ export function AuthApp() {
   }, []);
 
   const signedIn = state.kind === "signed-in";
+  // Changes on every sign-in and sign-out, so a keep-alive answer from an earlier state is ignored
+  // (review R5): a late 401 must not overwrite "You have signed out." or sign out a new session.
+  const sessionGeneration = useRef(0);
+  const enterState = useCallback((next: State) => {
+    sessionGeneration.current += 1;
+    setState(next);
+  }, []);
 
   const keepAlive = useCallback(async () => {
+    const generation = sessionGeneration.current;
     const result = await getSession();
+    if (generation !== sessionGeneration.current) return;
     // A network blip is not a sign-out; the next keep-alive tries again.
     if (result.status === "signed-out") {
-      setState({ kind: "signed-out", notice: "session-ended" });
+      enterState({ kind: "signed-out", notice: "session-ended" });
     }
-  }, []);
+  }, [enterState]);
 
   useEffect(() => {
     if (!signedIn) return;
@@ -65,7 +74,7 @@ export function AuthApp() {
     setSignOutFailed(false);
     const ok = await signOut();
     setSigningOut(false);
-    if (ok) setState({ kind: "signed-out", notice: "signed-out" });
+    if (ok) enterState({ kind: "signed-out", notice: "signed-out" });
     else setSignOutFailed(true);
   }
 
@@ -84,7 +93,7 @@ export function AuthApp() {
       <Layout>
         <SignInScreen
           notice={state.notice}
-          onSignedIn={(user) => setState({ kind: "signed-in", user })}
+          onSignedIn={(user) => enterState({ kind: "signed-in", user })}
         />
       </Layout>
     );

@@ -122,6 +122,62 @@ describe("signed-in shell and session end (AC-14)", () => {
     expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
 
+  describe("a keep-alive answer that arrives late (review R5)", () => {
+    /** The first session check succeeds; the next one is held until the test releases it as a 401. */
+    function delayedKeepAlive() {
+      let release401: () => void = () => {};
+      let sessionCalls = 0;
+      const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const key = `${(init?.method ?? "GET").toUpperCase()} ${String(input)}`;
+        const reply = (status: number, body?: unknown) =>
+          new Response(body === undefined ? null : JSON.stringify(body), { status });
+        if (key === "GET /api/auth/session") {
+          sessionCalls += 1;
+          if (sessionCalls === 2) {
+            await new Promise<void>((resolve) => (release401 = resolve));
+            return reply(401, {});
+          }
+          return reply(200, { user });
+        }
+        if (key === "POST /api/auth/sign-out") return reply(204);
+        if (key === "POST /api/auth/sign-in") return reply(200, { user });
+        throw new Error(`Unexpected request: ${key}`);
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      return { release: () => act(async () => release401()) };
+    }
+
+    it("does not replace 'You have signed out.' when it answers 401 after sign-out", async () => {
+      const keepAlive = delayedKeepAlive();
+      render(<AuthApp />);
+      const u = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await screen.findByRole("button", { name: "Sign out" });
+      await advance(2 * minute); // keep-alive starts and waits
+      await u.click(screen.getByRole("button", { name: "Sign out" }));
+      expect(await screen.findByRole("status")).toHaveTextContent("You have signed out.");
+      await keepAlive.release();
+      await advance(0);
+      expect(screen.getByRole("status")).toHaveTextContent("You have signed out.");
+    });
+
+    it("does not sign out a user who signed in again meanwhile", async () => {
+      const keepAlive = delayedKeepAlive();
+      render(<AuthApp />);
+      const u = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await screen.findByRole("button", { name: "Sign out" });
+      await advance(2 * minute); // keep-alive starts and waits
+      await u.click(screen.getByRole("button", { name: "Sign out" }));
+      await u.type(await screen.findByLabelText(/^Email/), "user@example.test");
+      await u.type(screen.getByLabelText(/^Password/), "123456");
+      await u.click(screen.getByRole("button", { name: "Sign in" }));
+      await screen.findByRole("button", { name: "Sign out" });
+      await keepAlive.release();
+      await advance(0);
+      expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Sign in" })).not.toBeInTheDocument();
+    });
+  });
+
   it("moves from sign-in to the shell after a successful sign-in", async () => {
     mockFetch({
       "GET /api/auth/session": { status: 401, body: {} },

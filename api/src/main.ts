@@ -7,12 +7,12 @@ import { loadConfig } from "./config/config";
 
 async function bootstrap(): Promise<void> {
   // Validates configuration first, so unsafe settings stop the API before it listens.
-  const { port } = loadConfig(process.env);
+  const { port, host } = loadConfig(process.env);
   const app = configureApp(
     await NestFactory.create<NestExpressApplication>(AppModule, APP_OPTIONS),
   );
   app.enableShutdownHooks();
-  await app.listen(port);
+  await app.listen(port, host);
 }
 
 void bootstrap();

@@ -23,6 +23,8 @@ RUN DATABASE_URL=postgresql://build:unused@localhost:5432/unused node ../node_mo
 
 FROM node:24.22.2-alpine
 ENV NODE_ENV=production
+# Inside the container the API must accept connections from the web container (not only loopback).
+ENV API_HOST=0.0.0.0
 WORKDIR /app
 COPY --from=deps /app/node_modules node_modules
 COPY --from=deps /app/package.json ./

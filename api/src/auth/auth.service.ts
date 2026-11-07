@@ -41,10 +41,11 @@ export class AuthService {
     clientIp: string,
   ): Promise<{ token: string; email: string }> {
     const normalized = normalizeEmail(email);
-    const limit = await this.limiter.check(normalized, clientIp);
-    if (limit.blocked) {
+    // Recorded before the password check, so simultaneous guesses cannot all slip under the limit.
+    const reservation = await this.limiter.reserve(normalized, clientIp);
+    if (reservation.blocked) {
       this.logger.warn("Sign-in refused by rate limit.");
-      throw new SignInRateLimitedError(limit.retryAfterSeconds);
+      throw new SignInRateLimitedError(reservation.retryAfterSeconds);
     }
 
     const user = await this.prisma.user.findUnique({ where: { email: normalized } });
@@ -53,7 +54,7 @@ export class AuthService {
       : await this.passwords.verifyAgainstDummy(password);
 
     if (!user || !valid) {
-      await this.limiter.recordFailure(normalized, clientIp);
+      // The reservation stays as the recorded failure.
       this.logger.log("Sign-in failed.");
       throw new UnauthorizedException({ message: INVALID_CREDENTIALS });
     }

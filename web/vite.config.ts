@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitest/config";
+import { stripClientForwardedFor } from "./src/dev-server/stripForwardedFor";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -9,7 +10,7 @@ export default defineConfig({
     // Same origin keeps the SameSite=Strict session cookie and the API's Origin check working.
     port: 5173,
     strictPort: true,
-    proxy: { "/api": { target: "http://localhost:3000" } },
+    proxy: { "/api": { target: "http://localhost:3000", configure: stripClientForwardedFor } },
   },
   test: {
     environment: "jsdom",
