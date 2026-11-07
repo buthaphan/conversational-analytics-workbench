@@ -1,0 +1,16 @@
+{
+  "name": "conversational-analytics-workbench",
+  "private": true,
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "format": "npm run format -w web",
+    "format:check": "npm run format:check -w web",
+    "lint": "npm run lint -w web",
+    "typecheck": "npm run typecheck -w web",
+    "test": "npm run test -w web",
+    "build": "npm run build -w web"
+  }
+}

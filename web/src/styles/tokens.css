@@ -1,0 +1,135 @@
+/*
+ * Design tokens: the single source of truth (see docs/design/DESIGN-SYSTEM.md).
+ * Tailwind exposes each --color-* as utilities (bg-surface, text-fg, ...) that
+ * reference these variables, so a future dark theme only overrides variables.
+ * Raw color literals are allowed in this file only.
+ * `static` makes Tailwind emit every variable even when no utility uses it, so swatches,
+ * inline var() references, and a future dark theme can rely on all of them existing.
+ */
+@theme static {
+  /* Remove Tailwind's default palette: only project tokens exist. */
+  --color-*: initial;
+
+  /* Brand anchors (accents; teal and gold are not text-safe on light surfaces) */
+  --color-brand-navy: #18324b;
+  --color-brand-teal: #14a38b;
+  --color-brand-gold: #e5a93d;
+
+  /* Surfaces */
+  --color-canvas: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-surface-muted: #edf1f5;
+
+  /* Text */
+  --color-fg: #142433;
+  --color-fg-secondary: #3b4f63;
+  --color-fg-muted: #56677a;
+  --color-accent: #0b7363;
+
+  /* Borders and focus */
+  --color-border: #d6dee6;
+  --color-border-input: #7b8a99;
+  --color-focus: #0b7363;
+
+  /* Actions */
+  --color-primary: #18324b;
+  --color-primary-hover: #0f2335;
+  --color-on-primary: #ffffff;
+  --color-destructive: #b42318;
+  --color-destructive-hover: #912018;
+  --color-on-destructive: #ffffff;
+
+  /* Status: foreground (text and icons), subtle background, border */
+  --color-success: #146c43;
+  --color-success-subtle: #e7f5ee;
+  --color-success-border: #9acfb3;
+  --color-warning: #8a5a00;
+  --color-warning-subtle: #fdf4e3;
+  --color-warning-border: #ebc779;
+  --color-error: #b42318;
+  --color-error-subtle: #fdecea;
+  --color-error-border: #f1a9a2;
+  --color-info: #1d4f91;
+  --color-info-subtle: #eaf1fb;
+  --color-info-border: #a9c3e8;
+
+  /*
+   * Chart palettes. Categorical colors are each >= 3:1 on surface and stay distinguishable
+   * under simulated protanopia, deuteranopia, and tritanopia (see chartPalette.test.ts).
+   * Always pair color with labels or the data table; never rely on color alone.
+   */
+  --color-chart-1: #2563a6;
+  --color-chart-2: #0e8a74;
+  --color-chart-3: #a86a00;
+  --color-chart-4: #9b2335;
+  --color-chart-5: #5a1a73;
+  --color-chart-6: #ad789e;
+  /* Sequential (light to dark), for ordered magnitudes */
+  --color-seq-1: #dce8f2;
+  --color-seq-2: #a9c6df;
+  --color-seq-3: #6f9cc6;
+  --color-seq-4: #3a6fa5;
+  --color-seq-5: #18324b;
+  /* Diverging (negative to positive around a neutral midpoint) */
+  --color-div-1: #9b2335;
+  --color-div-2: #d88a8f;
+  --color-div-3: #eef0f2;
+  --color-div-4: #87a9cf;
+  --color-div-5: #2563a6;
+
+  /* Typography: self-hosted Inter (bundled by @fontsource-variable/inter) */
+  --font-sans:
+    "Inter Variable", ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+
+  --text-*: initial;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.25rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.25rem;
+  --text-label--font-weight: 500;
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.75rem;
+  --text-h3--font-weight: 600;
+  --text-h2: 1.375rem;
+  --text-h2--line-height: 1.875rem;
+  --text-h2--font-weight: 600;
+  --text-h1: 1.75rem;
+  --text-h1--line-height: 2.25rem;
+  --text-h1--font-weight: 650;
+  --text-display: 2.25rem;
+  --text-display--line-height: 2.5rem;
+  --text-display--font-weight: 600;
+
+  /* Spacing: 4px base unit (p-1 = 4px, p-4 = 16px) */
+  --spacing: 0.25rem;
+
+  /* Radius */
+  --radius-*: initial;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.625rem;
+  --radius-full: 9999px;
+
+  /* Elevation (navy-tinted, subtle) */
+  --shadow-*: initial;
+  --shadow-sm: 0 1px 2px 0 rgb(20 36 51 / 0.06);
+  --shadow-md: 0 2px 6px -1px rgb(20 36 51 / 0.1), 0 1px 3px -1px rgb(20 36 51 / 0.06);
+
+  /* Breakpoints: 640 / 768 / 1024 / 1280 px; minimum supported width is 320 px */
+  --breakpoint-*: initial;
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+}
+
+:root {
+  /* Border widths: hairline for surfaces and inputs; strong for emphasis and focus rings */
+  --border-width-default: 1px;
+  --border-width-strong: 2px;
+}
