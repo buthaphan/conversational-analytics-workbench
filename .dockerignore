@@ -1,0 +1,16 @@
+# Keep secrets and local development data out of Docker build contexts
+.env
+.env.*
+!.env.example
+.aws/
+.ssh/
+.git/
+.claude/settings.local.json
+node_modules/
+dist/
+build/
+coverage/
+*.pem
+*.key
+*.p12
+*.pfx
