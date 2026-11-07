@@ -2,7 +2,7 @@
 
 **Spec revision:** 1 (approved 2026-11-08)  
 **Plan:** [02-implementation-plan.md](02-implementation-plan.md)  
-**Branch:** `feature/TASK-001-user-accounts` (started from `93d8d5a`; all changes uncommitted)  
+**Branch:** `feature/TASK-001-user-accounts` (started from `93d8d5a`; implementation committed by the user in `1e132c5`)  
 **Status:** All 20 plan steps done. The manual browser check (AC-19) was done by the user in Chrome on 2026-11-08: 8 of 9 items passed and the idle-timeout item was skipped. Ready for `/task-review`.
 
 ## Changed files
@@ -105,7 +105,7 @@ The API test output includes four `ERROR [SessionStore]`/sweeper log lines. They
 | AC-14 | Met | `AuthApp.test.tsx` (shell content, 2-minute keep-alive, visibility ping, session-ended message, network blip tolerated, sign-out and its failure, axe); `App.test.tsx` (refresh path) |
 | AC-15 | Met | `App.test.tsx` (reference page at `/design-reference` without fetching); `check:build` |
 | AC-16 | Met | Compose run recorded above |
-| AC-17 | Implemented; **GitHub run unverified** | Workflow: Node from `.nvmrc`, PostgreSQL service with placeholder credentials, generate, format, lint, typecheck, test, build, and an `images` job that builds both images without pushing; `contents: read`; no secrets. It runs after the user pushes. |
+| AC-17 | Met | Workflow: Node from `.nvmrc`, PostgreSQL service with placeholder credentials, generate, format, lint, typecheck, test, build, and an `images` job that builds both images without pushing; `contents: read`; no secrets. The GitHub Actions run for `feature/TASK-001-user-accounts` at `1e132c5` passed both jobs (reported by the user, 2026-11-08). |
 | AC-18 | Met | README (current stage, Run locally), `PROJECT-SETUP.md` (#1 partly, #8, decision rows), auth `IDEA.md`, commented `example.env` |
 | AC-19 | **Met except one item** (user, Chrome, 2026-11-08) | 8 of 9 checklist items passed. Item 7 (a closed tab's session ends with a shortened idle timeout) was skipped by the user; that behavior has automated evidence only (AC-6, AC-9). Accepting this is a review/closeout decision. |
 
@@ -127,7 +127,7 @@ The API test output includes four `ERROR [SessionStore]`/sweeper log lines. They
 ## Limitations and follow-ups
 
 1. **Dependency audit:** done. Runtime 0; the development-only `minimatch` advisory remains, as accepted in TASK-002 DEC-004.
-2. **AC-19:** the idle-timeout manual item was skipped (automated evidence only). **AC-17** is verified on GitHub after the push.
+2. **AC-19:** the idle-timeout manual item was skipped (automated evidence only). **AC-17:** the GitHub run passed at `1e132c5`.
 3. **API tests take about 60–80 s**, mostly real scrypt hashing for unknown-email checks. Acceptable for now; a test-only lower cost for the dummy hash would speed them up.
 4. **In npm development mode the API listens on all network interfaces (port 3000).** That is fine on a private machine; binding to `127.0.0.1` outside containers is a small follow-up.
 5. **No Content-Security-Policy yet.** Worth adding with the AWS deployment task, after checking it against the production build.
