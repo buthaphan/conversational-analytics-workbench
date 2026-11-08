@@ -2,7 +2,7 @@
 
 **Branch:** `feature/TASK-003-conversational-workflow` (from `main` at `d30688f`)  
 **Idea record:** [IDEA.md](../../../ideas/2026-11-08-conversational-analytics/IDEA.md), [ARCHITECTURE-PROPOSAL.md](../../../ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md) (revision 5, accepted 2026-11-08), [FUNCTION-REVIEW.md](../../../ideas/2026-11-08-conversational-analytics/FUNCTION-REVIEW.md)  
-**Status:** Spec and plan approved 2026-11-08. Implementation done and committed in `f99200b`; the checks, the walkthrough, and CI passed ([03-implementation-notes.md](03-implementation-notes.md)). Next: `/task-review`.
+**Status:** Spec and plan approved 2026-11-08. Complete: closeout accepted by the user on 2026-11-08 ([06-closeout.md](06-closeout.md)). Final commit `c82cdd2`; CI passed.
 
 ## Accepted intent
 

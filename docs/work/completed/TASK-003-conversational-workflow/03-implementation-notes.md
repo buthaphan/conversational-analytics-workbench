@@ -3,7 +3,7 @@
 **Spec revision:** approved 2026-11-08 ([01-spec.md](01-spec.md))
 **Plan:** [02-implementation-plan.md](02-implementation-plan.md)
 **Branch:** `feature/TASK-003-conversational-workflow` (from `71f3e96`; implementation committed by the user in `f99200b`)
-**Status:** All 16 plan steps are done. The clean install, `npm audit`, the AC-18 walkthrough (user), and CI for `f99200b` all passed. Review round 1 fixes are committed in `80434b5` (CI passed, reported by the user). Review round 2 fixes (N1, N3, plus the N2 handover note) are done (below) and wait for the user to commit; CI should be confirmed before closeout.
+**Status:** All 16 plan steps are done. The clean install, `npm audit`, the AC-18 walkthrough (user), and CI for `f99200b` all passed. Review round 1 fixes are committed in `80434b5` (CI passed, reported by the user). Review round 2 fixes (N1, N3, plus the N2 handover note) are committed in `c82cdd2`; CI passed (reported by the user).
 
 ## Summary
 
@@ -81,7 +81,7 @@ Run 2026-11-08 on Windows 11, Node v24.16.0, npm 11.17.0, with PostgreSQL in Doc
 **Feedback fixed:** the conversation grew down the page, so the chart and table scrolled out of view and changes to the data could not be seen.
 - **Fix:** the conversation history is now a fixed-height panel that scrolls on its own (`max-h-[50vh]`, or the viewport height minus the header on wide screens). It stays scrolled to the newest message. It is keyboard-focusable and labelled "Conversation history". On wide screens the conversation column also stays in place beside the result.
 - **Test first:** a new test in `Workspace.test.tsx` was red (`Unable to find role="region" and name "Conversation history"`) and is now green. The web suite has 305 passing tests plus 1 expected fail; lint, typecheck, and format pass.
-- **Still open:** the user has not yet seen the fix in the browser.
+- **Confirmed** by the user in the browser, together with a 320 px window (2026-11-08).
 
 Start the stack as in the README (Docker, or `npm run db:deploy -w api` then the dev servers). Sign in as `user@example.test`. Use the example buttons, or type the sentences.
 
@@ -159,9 +159,9 @@ Source: [05-task-review.md](05-task-review.md), round 2. The user chose to fix N
 | AC-13 | HTTP refresh and sign-out tests; `Workspace.test.tsx` restore test; AuthApp test for the 401 return |
 | AC-14 | `dependencies.test.ts`; `fixture-data-source.test.ts`; scripted double used in the orchestrator tests |
 | AC-15 | `demo-llm-client.test.ts`; `config.test.ts` (default, `none`, production refusal); `Workspace.test.tsx` (banner, examples) |
-| AC-16 | `Workspace.test.tsx` (scrolling conversation panel, empty state, banner, scope summary, bar chart and table, table view, analysis card, switch group, busy state, live region, focus, errors), with axe run on three states (empty with demo banner, loaded result, pending switch). **320 px reflow:** the layout stacks in one column below the `lg` breakpoint and the tables scroll inside their own region. To be confirmed in the walkthrough. |
+| AC-16 | `Workspace.test.tsx` (scrolling conversation panel, empty state, banner, scope summary, bar chart and table, table view, analysis card, switch group, busy state, live region, focus, errors), with axe run on three states (empty with demo banner, loaded result, pending switch). **320 px reflow:** the layout stacks in one column below the `lg` breakpoint and the tables scroll inside their own region. Confirmed by the user in the browser. |
 | AC-17 | `conversations.http.test.ts` (12 conversations through HTTP) |
-| AC-18 | Walkthrough above: passed by the user; the layout fix still needs a visual check |
+| AC-18 | Walkthrough above: passed by the user, including the conversation-panel fix and a 320 px window |
 | AC-19 | README, `example.env`, `compose.yaml`, TASK-004 handover; CI passed for `f99200b` |
 
 ## Simplicity check
