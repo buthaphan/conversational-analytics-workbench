@@ -1,0 +1,385 @@
+# Conversational Analytics Workbench — AI & Data Requirements
+
+## Your role
+
+Act as a senior software engineer and AI application architect.
+
+Help me design and implement the AI and data functionality for my Conversational Analytics Workbench.
+
+## 1. Current project status
+
+The application is currently at an early development stage, with login and logout functionality being implemented.
+
+The AI analytics functionality has not yet been implemented.
+
+Before making any changes:
+
+1. Inspect the existing repository, architecture, authentication implementation, and development conventions.
+2. Identify the current frontend, backend, database, and technology stack.
+3. Identify existing integrations and relevant dependencies.
+4. Do not assume that any functionality described below already exists.
+
+**Do not start implementation yet.** First produce an architecture proposal, identify outstanding questions, and present an implementation plan for my approval.
+
+## 2. Product objective
+
+The Conversational Analytics Workbench allows users to explore business data through natural-language conversation.
+
+The user should be able to:
+
+- Ask questions about available business data.
+- Have the AI identify the appropriate dataset.
+- Ask for clarification when the intended dataset or parameters are unclear.
+- Apply filters and conditions using natural language.
+- View results in appropriate visualizations.
+- Change how the current data is visualized.
+- Continue exploring the current dataset conversationally.
+- Move to another dataset while maintaining a coherent conversation.
+
+The experience should feel like an ongoing analytical conversation rather than a series of disconnected database queries.
+
+## 3. Available data
+
+The application will use approximately 10 existing stored procedures.
+
+Each stored procedure has a description explaining the dataset it returns and the type of information available.
+
+The AI should use these descriptions to understand which dataset is appropriate for a user's question.
+
+Important:
+
+- Inspect the actual stored procedures and their descriptions when access to them is available.
+- Do not invent stored procedures, datasets, database fields, or parameters.
+- Do not assume the database schema or stored procedure signatures.
+- Identify any missing information before implementation.
+
+## 4. AI responsibilities
+
+The AI should be responsible for understanding user intent and deciding what operation is required.
+
+Its responsibilities include:
+
+### Dataset selection
+
+- Understand the user's natural-language request.
+- Identify the most appropriate available dataset.
+- Use the stored procedure descriptions to make this decision.
+- Consider the current active dataset and conversation context.
+- Ask the user for clarification only when it cannot confidently determine what is intended.
+
+### Parameter interpretation
+
+The AI should interpret natural-language requirements and determine the appropriate parameters.
+
+Examples:
+
+- Date ranges.
+- Regions.
+- Categories.
+- Filtering conditions.
+- Grouping or analytical requirements.
+
+The AI should propose structured parameters rather than execute SQL or manipulate the database directly.
+
+### Conversational clarification
+
+Clarification should be focused and used only when needed.
+
+The AI should ask the user a question in these specific situations:
+
+1. **It cannot confidently determine the parameter(s) to apply to the current dataset.** Ask a focused question to establish the user's intended parameter or filter.
+2. **It knows that a different dataset is required.** Ask whether the user wants to switch to the new dataset or continue exploring the current dataset.
+
+Do not ask unnecessary questions when the request, dataset, and parameters are clear. Do not introduce additional confirmation steps or general clarification workflows without explaining why and getting my approval.
+
+Do not treat an LLM confidence score as a guarantee of correctness.
+
+### Visualization requests
+
+The AI should understand requests to change the visualization.
+
+For example:
+
+User: "Show me this as a pie chart instead of a bar chart."
+
+The AI should recognize that this is a visualization change, not necessarily a request for a different dataset.
+
+If the current data contains what is needed for the new visualization, reuse it rather than unnecessarily retrieving data again.
+
+### Dataset transitions
+
+When the AI knows that the user is asking for information requiring a different dataset, it should ask:
+
+"Would you like to explore anything further from your current dataset, or should I switch to the new dataset?"
+
+If the user wants to continue exploring, remain on the current dataset.
+
+If the user confirms the switch, identify the appropriate new dataset/stored procedure and the parameters needed for the request, then continue the workflow.
+
+Do not ask for a dataset-switch confirmation when the current dataset can support the request.
+
+## 5. Backend responsibilities
+
+The backend must remain responsible for executing data operations.
+
+It should:
+
+- Maintain the authoritative mapping between dataset identifiers and stored procedures.
+- Validate AI-generated dataset selections and parameters.
+- Enforce authentication and authorization.
+- Validate and sanitize inputs.
+- Execute approved stored procedures.
+- Apply filtering and other data operations using appropriate backend logic.
+- Temporarily store the complete retrieved dataset as the current dataset for the conversation.
+- Return structured results and meaningful errors.
+- Maintain authoritative conversation and dataset state.
+- Prevent arbitrary SQL execution or unauthorized database access.
+
+The AI should never receive database credentials or execute arbitrary SQL.
+
+The backend should not blindly trust AI-generated parameters.
+
+**The AI interprets the user's intent and proposes the dataset and parameters. The backend validates the request and performs the actual data operations.**
+
+## 6. Confirmed dataset retrieval, temporary storage, and filtering workflow
+
+This section describes the intended behaviour and should be preserved when reviewing the architecture.
+
+### A. When the current dataset can support the request
+
+1. The AI considers the user's request, the active dataset, and that dataset's supported capabilities.
+2. If the AI understands the requested parameters, it proposes the appropriate structured parameters.
+3. The backend validates the parameters.
+4. The backend applies the parameters/filters to the **complete current dataset already stored for the conversation**.
+5. The backend returns the filtered result to the frontend.
+
+Do not rerun the stored procedure simply because the user changes a filter or parameter that can be applied to the current dataset.
+
+If the AI cannot confidently determine the parameter(s), it asks the user a focused clarification question and waits for the answer before requesting the operation.
+
+### B. When a new dataset is required
+
+When the AI knows that a different dataset is required, it first asks the user whether they want to switch datasets or continue exploring the current dataset.
+
+After the user confirms the switch, and the AI has identified the new dataset/stored procedure and the parameters needed, the backend performs the following workflow:
+
+**Retrieve complete dataset → Store as current dataset → Apply parameters → Return filtered result**
+
+1. **AI identifies the appropriate dataset/stored procedure and requested parameters.**
+   - Use the actual stored procedure descriptions and capabilities.
+   - Do not invent dataset names, stored procedure names, fields, or parameters.
+   - Ask for clarification if the intended dataset or parameters are not clear.
+2. **Backend retrieves the complete dataset.**
+   - Map the approved dataset identifier to the actual stored procedure using backend-owned mapping.
+   - Validate and authorize the request.
+   - Execute the appropriate stored procedure.
+3. **Backend stores the complete newly retrieved dataset as the conversation's current dataset.**
+   - Store the complete dataset, not only the filtered result.
+   - Associate it with the relevant conversation/session and dataset identity.
+   - This makes the dataset available for continued exploration.
+4. **Backend applies the AI-proposed parameters/filters to that newly retrieved dataset.**
+   - Validate that the parameters are allowed and supported.
+   - Apply the filtering/processing in backend logic.
+5. **Backend returns the filtered result to the frontend.**
+
+The backend therefore performs two key jobs in the new-dataset workflow:
+
+1. Retrieve the complete dataset and store it as the current dataset.
+2. Apply the requested parameters to that stored dataset and return the filtered result.
+
+The AI must know and propose the parameters as part of the new-dataset request. Retrieving a new dataset does not mean the backend should return the unfiltered dataset as the final user result if the user has already requested filters.
+
+### C. Subsequent exploration of the current dataset
+
+- The complete retrieved dataset remains temporarily available for the conversation, subject to an agreed expiry/retention policy.
+- If the user asks to change parameters or filters that the current dataset supports, the backend applies them to the stored complete dataset.
+- Do not execute the stored procedure again unless the user request requires information not available in the current dataset or another agreed requirement calls for a new retrieval.
+- A visualization change should reuse the existing data when possible. Retrieve more data only if the requested visualization or analysis requires information not present in the current dataset.
+
+### D. Switching datasets
+
+- The AI recognizes that a different dataset is required and asks the user whether they want to switch.
+- If the user chooses to continue with the current dataset, keep the current dataset active and continue exploring it.
+- If the user confirms the switch, the AI identifies the appropriate stored procedure and parameters.
+- The backend retrieves the new complete dataset, stores it as the new current dataset, applies the requested parameters, and returns the filtered result.
+- Whether the previous dataset is retained temporarily or discarded is not yet decided. Review this based on actual requirements; do not assume the previous dataset must remain stored.
+
+## 7. Conversational state
+
+The application needs to maintain relevant state between user requests.
+
+Consider the following information:
+
+- Conversation identifier.
+- Active dataset identity.
+- Current complete dataset reference/location in temporary storage.
+- Current filters and parameters.
+- Current visualization.
+- Relevant conversation history.
+- Current analytical context.
+
+The AI should receive sufficient context to determine whether the latest request relates to the current dataset and whether that dataset supports the request.
+
+The backend should remain the authoritative source of application state.
+
+**Keep conversation state separate from the actual temporary dataset storage.** Conversation state may track the active dataset identifier/reference, parameters, and visualization; dataset storage holds the complete retrieved data itself.
+
+Avoid unnecessary retrieval when the user is simply changing filters or visualization preferences.
+
+The conversation should continue across multiple user turns. It does not require a single request to remain open while waiting for the user:
+
+1. Frontend sends the user's message to the backend.
+2. Backend sends the AI the relevant conversation context and authoritative current dataset state.
+3. If clarification is needed, the AI's question is returned to the frontend.
+4. The user's answer arrives as a new request, with relevant context supplied again.
+5. When the AI requests a data operation, the backend validates and performs it.
+6. The result and updated state are supplied to the AI/frontend as appropriate.
+
+Do not rely solely on the LLM's implicit memory for active dataset identity, parameters, or session state.
+
+## 8. Temporary dataset storage — design decision still open
+
+The requirement to store the complete current dataset temporarily is confirmed. **The storage technology and retention policy are not yet decided.**
+
+Do not prematurely choose in-memory storage, Redis, a database, or another storage option. Inspect the project and consider:
+
+- Typical and maximum dataset sizes.
+- Data sensitivity and privacy requirements.
+- Expected concurrent users and conversations.
+- Backend deployment architecture and whether multiple instances are expected.
+- Whether dataset state must survive backend restarts or deployments.
+- Expiry, cleanup, and retention requirements.
+- Performance, memory, and cost implications of storing complete datasets.
+
+Distinguish the conversation/session state from the complete dataset cache/storage.
+
+Recommend the simplest suitable option and explain the trade-offs. If storing complete datasets creates a significant performance, memory, privacy, or cost concern, explain the evidence and propose alternatives for my review. Do not silently change the confirmed requirement.
+
+## 9. AI and backend communication
+
+Investigate an appropriate communication approach using the existing technology stack.
+
+Consider AI tool/function calling or an equivalent structured interaction mechanism.
+
+The proposed design should clearly define:
+
+- How the AI receives dataset descriptions and capability information.
+- How it receives current dataset/conversation context.
+- How it proposes dataset selections and parameters.
+- How the backend validates and executes requests.
+- How the backend retrieves and stores a new complete dataset.
+- How parameters are applied and results/errors returned.
+- How conversation and active-dataset state are updated.
+- How clarification and dataset switching are handled.
+
+Keep the AI integration modular so the LLM provider can potentially be changed without redesigning the entire application.
+
+Do not assume a particular AI provider or SDK without inspecting the current project and discussing the options.
+
+## 10. Frontend responsibilities
+
+The frontend should:
+
+- Provide a conversational interface.
+- Display AI responses and clarification questions.
+- Display retrieved analytical data.
+- Render appropriate charts, graphs, and tables.
+- Allow users to change visualization types conversationally.
+- Maintain a clear indication of the current dataset where appropriate.
+- Provide a coherent experience when switching datasets.
+
+The AI should interpret visualization requests, while the frontend handles rendering.
+
+## 11. Important engineering considerations
+
+Evaluate:
+
+- Authentication and authorization.
+- Data privacy and sensitive information.
+- AI-generated dataset selection and parameter validation.
+- Dataset size and temporary storage performance.
+- Database efficiency and avoiding unnecessary stored procedure calls.
+- Error handling and recovery.
+- Conversation and active-dataset state consistency.
+- LLM cost and latency.
+- Testability and maintainability.
+- Correctness of returned data and applied filters.
+
+Do not send unnecessary or sensitive data to the LLM. Prefer passing dataset descriptions, metadata, and only the data/context needed for the AI's task.
+
+## 12. Expected behaviour examples
+
+### Example A — Initial request requiring a new dataset
+
+User: "Show me sales by region."
+
+AI identifies the sales dataset/stored procedure and the region parameter.
+
+Backend retrieves the complete dataset, stores it as the current dataset, applies the region parameter, and returns the filtered results.
+
+### Example B — Continue exploring the current dataset
+
+User: "Now show me only the Auckland region."
+
+AI recognizes that the current dataset supports the request.
+
+Backend applies the new filter to the stored complete dataset and returns the result.
+
+The stored procedure is not called again unnecessarily.
+
+### Example C — Change visualization
+
+User: "Show me this as a pie chart."
+
+AI recognizes a visualization change.
+
+The frontend updates the visualization using the existing data if it contains what is needed. No unnecessary dataset retrieval.
+
+### Example D — Switch datasets
+
+User: "Now show me customer retention."
+
+AI recognizes that a different dataset is required.
+
+It asks whether the user wants to switch datasets or continue exploring the current dataset.
+
+If the user confirms, AI identifies the new dataset/stored procedure and the parameters. Backend retrieves the complete new dataset, stores it as current, applies the parameters, and returns the filtered results.
+
+These examples illustrate intended behaviour. Actual dataset names and capabilities must be verified against the existing application.
+
+## 13. First deliverable — architecture and implementation proposal
+
+Before coding, provide:
+
+1. Summary of the existing repository and architecture.
+2. Relevant existing authentication and backend conventions.
+3. Proposed AI integration architecture.
+4. Proposed AI/backend communication contract.
+5. Proposed conversation-state design.
+6. Proposed dataset registry and stored procedure mapping.
+7. Clarification and dataset-switching workflow.
+8. **New-dataset workflow: retrieve complete dataset, store it as current, apply parameters, and return filtered results.**
+9. Approach to reusing the stored current dataset for later parameter changes.
+10. Temporary storage options, expiry/retention considerations, and trade-offs.
+11. Security and validation considerations.
+12. Implementation phases and dependencies.
+13. Testing strategy and acceptance criteria.
+14. Outstanding questions and decisions requiring my approval.
+
+Keep the first implementation focused and avoid unnecessary complexity.
+
+Do not modify existing login/logout functionality or introduce unrelated refactoring.
+
+Wait for my approval before implementing the proposed design.
+
+## Working approach
+
+Explain important architectural decisions and trade-offs.
+
+Identify assumptions rather than silently making major decisions.
+
+Help me understand the implementation so I can maintain it and explain it confidently in software engineering interviews.
+
+I will use Claude Code for implementation and ChatGPT for planning, mentoring, and reviewing architectural decisions.
+
+The goal is to build a maintainable, secure, production-minded AI analytics application, not simply demonstrate that an LLM can generate charts.
