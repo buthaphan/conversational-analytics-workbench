@@ -2,8 +2,8 @@
 
 **Spec revision:** approved 2026-11-08 ([01-spec.md](01-spec.md))
 **Plan:** [02-implementation-plan.md](02-implementation-plan.md)
-**Branch:** `feature/TASK-003-conversational-workflow` (from `71f3e96`; nothing committed yet)
-**Status:** Plan steps 1–15 are done. Step 16 is partly done: the automated checks pass, but the clean install, `npm audit`, and the AC-18 walkthrough need the user (see Verification).
+**Branch:** `feature/TASK-003-conversational-workflow` (from `71f3e96`; implementation committed by the user in `f99200b`)
+**Status:** All 16 plan steps are done. The clean install, `npm audit`, the AC-18 walkthrough (user), and CI for `f99200b` all passed. Review round 1 fixes are done (below). Ready for review round 2 after the user commits and CI passes.
 
 ## Summary
 
@@ -71,7 +71,7 @@ Run 2026-11-08 on Windows 11, Node v24.16.0, npm 11.17.0, with PostgreSQL in Doc
 | Forbidden content | Scan of every changed or new file for attribution lines, the employer term, key and token patterns, and the user's email | None found | |
 | Clean install | Deleted `api/src/generated`, `api/dist`, `web/dist`; `npm ci`; `npm run db:generate -w api`; then lint, typecheck, `npm test`, `npm run build` | Pass (API 332, web 304 + 1 expected fail, build checks 2/2) | Approved by the user, 2026-11-08. npm 11 again held back the install scripts of `@prisma/engines`, `@swc/core`, and `prisma`; everything works without them, as in TASK-001. |
 | `npm audit` | `npm audit`; `npm audit --omit=dev` | 10 moderate (development only); production: **0** | All 10 come from one advisory, `minimatch` 7.0.0–11.0.0 (GHSA-g3hv-75wg-m249, denial of service via pattern amplification), reached only through ESLint and typescript-eslint. These lint tools run on our own source, not on user input. The offered fix downgrades ESLint to 9 (`--force`, breaking), so nothing was changed. TASK-003 added no dependency in this chain. |
-| CI | GitHub Actions | **Not run** | Runs when the user pushes |
+| CI | GitHub Actions | Pass for `f99200b` (reported by the user, 2026-11-08) | Includes the plain `format:check` on Linux |
 | AC-18 walkthrough | Browser, demo model | Pass (user, 2026-11-08) | The user reported every step as expected. One layout issue was raised and fixed (below). |
 
 ### AC-18 manual walkthrough
@@ -103,6 +103,27 @@ Start the stack as in the README (Docker, or `npm run db:deploy -w api` then the
 | K | Keyboard only: Tab to the input, type, press Enter; Tab to Switch and Keep current | Everything reachable; focus stays in the input after sending | |
 | S | Sign out, then sign in | An empty workspace | |
 
+## Review round 1 fixes
+
+Source: [05-task-review.md](05-task-review.md). The user chose to fix R2–R6, R10, and R11, and to defer R1 and R7 to TASK-004 ([DEC-002](DECISION-LOG.md); required work in the handover, section 4). R8, R9, and R12 were left as optional.
+
+| Finding | Test first (red) | Fix |
+|---|---|---|
+| R2: message limit not visible | Orchestrator: state `notice` (failed: `undefined`). Web: limit shown on screen, input kept; limit shown after a refresh (both failed). | The state has `notice` (backend text, set when the next turn would pass 200 messages). The workspace shows it as a warning above the input. A reply that stored no message does not clear the input. |
+| R3: unbounded `top_count` | Registry: `1e20` and `100001` must be rejected (both failed) | `top_count` must be from 1 to the capability's row cap |
+| R4: a no-op confirmation cleared a clarification | Orchestrator: Switch, Keep current, and a confirming reply with only a clarification pending (3 failed) | The no-pending branch leaves `pending` unchanged |
+| R5: text typed while waiting was erased | Web: type more while the reply is pending (failed) | The input is cleared only if its current value is still the sent text |
+| R6: repeated replies not announced | Web: two identical replies must replace the live region's node (failed) | The announcement is a keyed node, a new one per reply |
+| R10a: over-cap switch | Orchestrator test: the old result stays (passed on first run: coverage for correct behavior) | No change needed |
+| R10b: switch confirmed while a message arrives | Orchestrator test with both in parallel: one result set, contiguous messages, a consistent outcome in either order (passed on first run) | No change needed |
+| R10c: axe on more states | axe added to the analysis-card, send-error, and load-error states (passed) | No change needed |
+| R11: example buttons inside a status region | Web: the banner's status region contains no buttons (failed) | The examples moved below the banner, outside the `Alert` |
+
+**Checks after the fixes:**
+- **API:** 26 files, 339 tests pass.
+- **Web:** 24 files, 309 tests pass, plus 1 expected fail.
+- Lint, typecheck, and build pass. The format check passes (run with `--end-of-line auto` on this machine).
+
 ## Acceptance criteria mapping
 
 | AC | Evidence |
@@ -125,7 +146,7 @@ Start the stack as in the README (Docker, or `npm run db:deploy -w api` then the
 | AC-16 | `Workspace.test.tsx` (scrolling conversation panel, empty state, banner, scope summary, bar chart and table, table view, analysis card, switch group, busy state, live region, focus, errors), with axe run on three states (empty with demo banner, loaded result, pending switch). **320 px reflow:** the layout stacks in one column below the `lg` breakpoint and the tables scroll inside their own region. To be confirmed in the walkthrough. |
 | AC-17 | `conversations.http.test.ts` (12 conversations through HTTP) |
 | AC-18 | Walkthrough above: passed by the user; the layout fix still needs a visual check |
-| AC-19 | README, `example.env`, `compose.yaml`, TASK-004 handover; CI pending the user's push |
+| AC-19 | README, `example.env`, `compose.yaml`, TASK-004 handover; CI passed for `f99200b` |
 
 ## Simplicity check
 
@@ -148,5 +169,5 @@ No dedicated review is needed. Points a reviewer may want to weigh:
 
 1. Done: clean install and `npm audit` (see Verification).
 2. Done: AC-18 walkthrough. The user still needs to check the conversation-panel fix in the browser.
-3. User: commit and push; report the CI result.
+3. Done: committed in `f99200b`, pushed; CI passed.
 4. Then `/task-review`.

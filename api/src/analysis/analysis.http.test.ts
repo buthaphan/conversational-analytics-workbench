@@ -61,6 +61,7 @@ describe("analysis HTTP API (TASK-003 AC-12, AC-13, AC-15)", () => {
       messages: [],
       activeResult: null,
       pending: null,
+      notice: null,
       demoExamples: DEMO_EXAMPLES,
     });
   });

@@ -76,6 +76,8 @@ export interface AnalysisState {
   messages: ChatMessage[];
   activeResult: ActiveResultState | null;
   pending: PendingAction | null;
+  /** Backend-written notice shown above the input, e.g. the message limit (review R2). */
+  notice: string | null;
 }
 
 export interface TurnResult {
@@ -308,6 +310,7 @@ export class AnalysisOrchestrator {
       }),
       activeResult,
       pending: facts.pending,
+      notice: facts.messageCount + 2 > MESSAGE_LIMIT ? ANSWERS.messageLimit : null,
     };
   }
 
@@ -318,8 +321,9 @@ export class AnalysisOrchestrator {
     switch (action.type) {
       case "confirm_switch": {
         const pending = facts.pending;
+        // Nothing to confirm: change nothing, not even a pending clarification (AC-7, review R4).
         if (pending?.type !== "switch")
-          return { text: ANSWERS.noPendingSwitch, kind: "no_pending_switch", pending: null };
+          return { text: ANSWERS.noPendingSwitch, kind: "no_pending_switch" };
         if (!action.accept) return { text: ANSWERS.keepCurrent, kind: "kept", pending: null };
         return this.load(tx, facts, pending.capability, pending.scope, pending.refinement);
       }

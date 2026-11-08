@@ -37,11 +37,13 @@ export function Workspace({ onSessionEnded }: WorkspaceProps) {
     messages: [],
     activeResult: null,
     pending: null,
+    notice: null,
   });
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
-  const [announcement, setAnnouncement] = useState("");
+  // Keyed by a counter so a repeated reply is a new node, which screen readers announce (review R6).
+  const [announcement, setAnnouncement] = useState({ id: 0, text: "" });
   const inputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
   const messageCount = state.messages.length;
@@ -85,9 +87,14 @@ export function Workspace({ onSessionEnded }: WorkspaceProps) {
       else setSendFailed(true);
       return;
     }
+    const stored = result.data.state.messages.length > state.messages.length;
     setState(result.data.state);
-    setAnnouncement(result.data.reply.text);
-    if (sent !== undefined && text.trim() === sent) setText("");
+    if (stored) {
+      setAnnouncement((previous) => ({ id: previous.id + 1, text: result.data.reply.text }));
+      // Compare with the current input, not the value when sending, so text typed while waiting
+      // is kept (review R5). A message that was not stored (the limit) keeps its text too (R2).
+      if (sent !== undefined) setText((current) => (current.trim() === sent ? "" : current));
+    }
     inputRef.current?.focus();
   }
 
@@ -119,12 +126,15 @@ export function Workspace({ onSessionEnded }: WorkspaceProps) {
   return (
     <div className="flex flex-col gap-6">
       {load.demoExamples && (
-        <Alert variant="info" title="Demo mode">
-          <p>
-            This development model only understands the example questions below. Select one to send
-            it.
-          </p>
-          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Example questions">
+        <div className="flex flex-col gap-3">
+          {/* The banner is a polite status region; the example buttons stay outside it (review R11). */}
+          <Alert variant="info" title="Demo mode">
+            <p>
+              This development model only understands the example questions below. Select one to
+              send it.
+            </p>
+          </Alert>
+          <ul className="flex flex-wrap gap-2" aria-label="Example questions">
             {load.demoExamples.map((example) => (
               <li key={example}>
                 <Button
@@ -138,7 +148,7 @@ export function Workspace({ onSessionEnded }: WorkspaceProps) {
               </li>
             ))}
           </ul>
-        </Alert>
+        </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -226,6 +236,7 @@ export function Workspace({ onSessionEnded }: WorkspaceProps) {
             </div>
           )}
 
+          {state.notice && <Alert variant="warning">{state.notice}</Alert>}
           {sendFailed && <Alert variant="error">Could not send your message. Try again.</Alert>}
 
           <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -248,7 +259,7 @@ export function Workspace({ onSessionEnded }: WorkspaceProps) {
 
           {/* New assistant replies are announced politely; the log itself is not a live region. */}
           <div data-testid="reply-announcer" aria-live="polite" className="sr-only">
-            {announcement}
+            {announcement.text && <p key={announcement.id}>{announcement.text}</p>}
           </div>
         </section>
       </div>

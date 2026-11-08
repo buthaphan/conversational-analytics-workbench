@@ -13,7 +13,7 @@ vi.mock("echarts-for-react", () => ({
 }));
 vi.mock("echarts", () => ({ registerTheme: () => {} }));
 
-const empty: AnalysisState = { messages: [], activeResult: null, pending: null };
+const empty: AnalysisState = { messages: [], activeResult: null, pending: null, notice: null };
 const examples = ["Who spent the most last year?", "Show this as a table"];
 
 const result: ActiveResult = {
@@ -48,6 +48,7 @@ const loaded: AnalysisState = {
   ],
   activeResult: result,
   pending: null,
+  notice: null,
 };
 
 const stateRoute = (state: AnalysisState, demoExamples: string[] | null = null) => ({
@@ -68,6 +69,10 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
     expect(screen.getByText("Demo mode")).toBeInTheDocument();
     for (const example of examples)
       expect(screen.getByRole("button", { name: example })).toBeInTheDocument();
+    // The examples are controls, so they sit outside the banner's polite status region (review R11).
+    const banner = screen.getByText("Demo mode").closest('[role="status"]');
+    expect(banner).not.toBeNull();
+    expect(within(banner as HTMLElement).queryAllByRole("button")).toHaveLength(0);
     expect(screen.getByRole("textbox", { name: "Ask a question" })).toBeInTheDocument();
     await expectNoAxeViolations(container);
   });
@@ -264,10 +269,94 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
         ],
       }),
     );
-    render(<Workspace onSessionEnded={() => {}} />);
+    const { container } = render(<Workspace onSessionEnded={() => {}} />);
     const card = await screen.findByRole("table", { name: "Concentration of total spend" });
     expect(within(card).getByRole("cell", { name: "38.4%" })).toBeInTheDocument();
     expect(within(card).getByRole("cell", { name: "All 1,412 customers" })).toBeInTheDocument();
+    await expectNoAxeViolations(container);
+  });
+
+  it("shows the message limit on screen and keeps the typed text (review R2)", async () => {
+    const limit =
+      "This conversation has reached its message limit. Sign out and in again to start a fresh analysis.";
+    mockFetch({
+      ...stateRoute(loaded),
+      "POST /api/analysis/messages": {
+        status: 200,
+        body: { reply: { text: limit }, state: { ...loaded, notice: limit } },
+      },
+    });
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} />);
+    const input = await screen.findByRole("textbox", { name: "Ask a question" });
+    await u.type(input, "one more{Enter}");
+    expect(
+      await screen.findByText(limit, { ignore: "[data-testid=reply-announcer] *" }),
+    ).toBeVisible();
+    expect(input).toHaveValue("one more");
+  });
+
+  it("shows the message limit after a refresh", async () => {
+    const limit = "Limit reached.";
+    mockFetch(stateRoute({ ...loaded, notice: limit }));
+    render(<Workspace onSessionEnded={() => {}} />);
+    expect(await screen.findByText(limit)).toBeVisible();
+  });
+
+  it("keeps text typed while a reply was on its way (review R5)", async () => {
+    let answer: (value: Response) => void = () => {};
+    mockFetch(stateRoute(empty));
+    const fetchMock = vi.mocked(fetch);
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input, init) =>
+      init?.method === "POST"
+        ? new Promise<Response>((resolve) => (answer = resolve))
+        : original(input, init),
+    );
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} />);
+    const input = await screen.findByRole("textbox", { name: "Ask a question" });
+    await u.type(input, "first{Enter}");
+    await u.type(input, " second");
+    const messages = [
+      { seq: 1, role: "user", text: "first" },
+      { seq: 2, role: "assistant", text: "Hi" },
+    ];
+    answer(
+      new Response(JSON.stringify({ reply: { text: "Hi" }, state: { ...empty, messages } }), {
+        status: 200,
+      }),
+    );
+    await screen.findByText("Hi", { selector: "li p" });
+    expect(input).toHaveValue("first second");
+  });
+
+  it("announces a reply again even when its text repeats (review R6)", async () => {
+    const sorry = "Sorry, I couldn't process that. Please rephrase.";
+    let count = 0;
+    mockFetch({
+      ...stateRoute(empty),
+      "POST /api/analysis/messages": () => {
+        count += 2;
+        const messages = Array.from({ length: count }, (_, i) => ({
+          seq: i + 1,
+          role: i % 2 === 0 ? "user" : "assistant",
+          text: i % 2 === 0 ? "???" : sorry,
+        }));
+        return { status: 200, body: { reply: { text: sorry }, state: { ...empty, messages } } };
+      },
+    });
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} />);
+    const input = await screen.findByRole("textbox", { name: "Ask a question" });
+    await u.type(input, "???{Enter}");
+    const live = screen.getByTestId("reply-announcer");
+    await waitFor(() => expect(live).toHaveTextContent(sorry));
+    const first = live.firstElementChild;
+    expect(first).not.toBeNull();
+    await u.type(input, "???{Enter}");
+    await waitFor(() => expect(live.firstElementChild).not.toBe(first));
+    expect(live).toHaveTextContent(sorry);
   });
 
   it("returns to sign-in when the session has ended", async () => {
@@ -280,7 +369,7 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
   it("keeps the typed text and shows an error when a message cannot be sent", async () => {
     mockFetch({ ...stateRoute(empty), "POST /api/analysis/messages": "network-error" });
     const u = userEvent.setup();
-    render(<Workspace onSessionEnded={() => {}} />);
+    const { container } = render(<Workspace onSessionEnded={() => {}} />);
     const input = await screen.findByRole("textbox", { name: "Ask a question" });
     await u.type(input, "hello");
     await u.click(screen.getByRole("button", { name: "Send" }));
@@ -288,6 +377,7 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
       "Could not send your message. Try again.",
     );
     expect(input).toHaveValue("hello");
+    await expectNoAxeViolations(container);
   });
 
   it("shows an error with a retry when the workspace cannot load", async () => {
@@ -297,8 +387,9 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
         reachable ? { status: 200, body: { ...empty, demoExamples: null } } : "network-error",
     });
     const u = userEvent.setup();
-    render(<Workspace onSessionEnded={() => {}} />);
+    const { container } = render(<Workspace onSessionEnded={() => {}} />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load your analysis.");
+    await expectNoAxeViolations(container);
     reachable = true;
     await u.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByRole("textbox", { name: "Ask a question" })).toBeInTheDocument();

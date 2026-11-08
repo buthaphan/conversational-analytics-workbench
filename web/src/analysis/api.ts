@@ -91,6 +91,8 @@ export interface AnalysisState {
   messages: ChatMessage[];
   activeResult: ActiveResult | null;
   pending: PendingAction | null;
+  /** Backend-written notice, e.g. the message limit; shown above the input. */
+  notice: string | null;
 }
 
 export type ApiError = "signed-out" | "network" | "unexpected";

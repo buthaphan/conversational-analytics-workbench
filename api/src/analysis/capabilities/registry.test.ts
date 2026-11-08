@@ -191,6 +191,22 @@ describe("capability registry (AC-2)", () => {
         },
         "invalid_value",
       ],
+      // Review R3: an unbounded count would overflow the SQL cast and fail the whole turn.
+      [
+        "customer_spending",
+        { operation: "concentration", measure: "total_spend", top_count: 1e20, target: "complete" },
+        "invalid_value",
+      ],
+      [
+        "customer_spending",
+        {
+          operation: "concentration",
+          measure: "total_spend",
+          top_count: 100_001,
+          target: "complete",
+        },
+        "invalid_value",
+      ],
     ])("rejects %s %j", (capability, analysis, code) => {
       const result = validateAnalysis(capability as never, analysis as never);
       expect(result.ok).toBe(false);

@@ -2,7 +2,7 @@
 
 **Branch:** `feature/TASK-003-conversational-workflow` (from `main` at `d30688f`)  
 **Idea record:** [IDEA.md](../../../ideas/2026-11-08-conversational-analytics/IDEA.md), [ARCHITECTURE-PROPOSAL.md](../../../ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md) (revision 5, accepted 2026-11-08), [FUNCTION-REVIEW.md](../../../ideas/2026-11-08-conversational-analytics/FUNCTION-REVIEW.md)  
-**Status:** Spec and plan approved 2026-11-08. Implementation done and the automated checks pass ([03-implementation-notes.md](03-implementation-notes.md)). Waiting on the user for the clean install and `npm audit` approval, the AC-18 walkthrough, and CI.
+**Status:** Spec and plan approved 2026-11-08. Implementation done and committed in `f99200b`; the checks, the walkthrough, and CI passed ([03-implementation-notes.md](03-implementation-notes.md)). Next: `/task-review`.
 
 ## Accepted intent
 

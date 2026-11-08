@@ -51,8 +51,16 @@ readonly demoExamples: string[] | null; // leave null for a real model
 - **Failure:** throw on API errors, timeouts, or refusals. The user then gets "Sorry, I couldn't process that. Please rephrase." Only the error's class name is logged, never the content.
 - **Reference decisions:** `api/src/analysis/llm/demo-llm-client.ts` lists, for each walkthrough sentence, the decision a correct model should return. These pairs are a ready-made evaluation set for the Claude prompt.
 
-## 4. Things to know
+## 4. Required work: turn lock and session end (DEC-002)
 
-- **Transaction length:** each turn runs in one database transaction that holds the analysis session's row lock (TD-6, TD-7), including the model call and the retrieval. The timeout is 120 s (`TURN_TRANSACTION` in `orchestrator.ts`), and each in-flight turn holds one pooled connection. With real latencies, review the timeout and the pool size, or move the model call out of the transaction (keeping the lock semantics).
+Each turn runs in one database transaction that holds the analysis session's row lock (TD-6, TD-7), including the model call and the retrieval. The timeout is 120 s (`TURN_TRANSACTION` in `orchestrator.ts`), and each in-flight turn holds one pooled connection. With real latencies this causes the problems found in the TASK-003 review (deferred to this task by DEC-002):
+
+- **R1:** a session end during a turn makes the 5 s cleanup transaction (`SessionStore.finishEnded`) wait on that lock and time out. The analysis data then stays until the sweeper retries. A sign-in elsewhere during a turn of about 25 s or more fails with `SessionUnavailableError`.
+- **R7:** `getState` (a refresh) during a session's first turn waits on the uncommitted analysis-session insert. With a turn longer than 5 s, the workspace shows "Could not load your analysis".
+
+**Fix before enabling the Claude model.** For example, take the decision outside the lock: build the context and call the model without holding the lock, then lock, re-read the facts, and apply the decision. Or bound cleanup's lock wait so session end never depends on a turn. Add tests that hold a turn open (a slow fake model) while the session ends, while another sign-in happens, and while the state is refreshed.
+
+## 5. Things to know
+
 - **`ANALYSIS_MODEL=none`:** the API starts, and every question gets the generic error. Production defaults to `none` until TASK-004 adds `claude`.
 - **Open items from the idea record:** check that Claude Max credits apply to API usage; check BigQuery Sandbox quotas and expiry; estimate per-turn cost; keep credentials out of the repository (secrets come from the environment only, and `example.env` gets placeholders).

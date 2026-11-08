@@ -365,6 +365,25 @@ describe("analysis orchestrator (AC-3, AC-4, AC-6, AC-7, AC-11)", () => {
       expect(data.calls).toHaveLength(1);
     });
 
+    it.each([
+      ["the Switch button", () => orchestrator.handleSwitch(authSessionId, userId, "switch")],
+      ["the Keep current button", () => orchestrator.handleSwitch(authSessionId, userId, "keep")],
+      [
+        "a confirming reply",
+        () => say("Yes", { ...base, action: { type: "confirm_switch", accept: true } }),
+      ],
+    ])(
+      "changes nothing when %s confirms with no switch pending (review R4)",
+      async (_, confirm) => {
+        const question = "Highest spend or most orders?";
+        await say("Best", { ...base, need: "unclear", action: { type: "clarify", question } });
+        const { reply, state } = await confirm();
+        expect(reply.text).toBe(ANSWERS.noPendingSwitch);
+        expect(state.pending).toEqual({ type: "clarification", question });
+        expect(data.calls).toHaveLength(1);
+      },
+    );
+
     it("keeps the old result and the pending switch when retrieval fails", async () => {
       await say("Product sales", load("product_sales_performance", y2025));
       data.fail = true;
@@ -455,12 +474,70 @@ describe("analysis orchestrator (AC-3, AC-4, AC-6, AC-7, AC-11)", () => {
       expect(await prisma.resultRow.count()).toBe(0);
     });
 
-    it("stops after 200 messages without calling the model", async () => {
+    it("refuses an over-cap switch, keeping the current result (review R10a)", async () => {
+      const capped = new AnalysisOrchestrator(
+        prisma,
+        new ResultEngine(prisma),
+        new ModelContextBuilder(prisma, new ResultEngine(prisma)),
+        llm,
+        data,
+        new FakeClock(),
+        { rowCap: 5 },
+      );
+      llm.push(load("product_sales_performance", y2025), load("customer_spending", y2025));
+      await capped.handleMessage(authSessionId, userId, "Products"); // 2 rows: within the cap
+      await capped.handleMessage(authSessionId, userId, "Customers"); // proposes a switch
+      const { reply, state } = await capped.handleSwitch(authSessionId, userId, "switch");
+      expect(reply.text).toBe(ANSWERS.rowCap("customer_spending", 10, 5));
+      expect(state.activeResult).toMatchObject({
+        capability: "product_sales_performance",
+        rowCount: 2,
+      });
+      expect(await prisma.resultSet.count()).toBe(1);
+      expect(await prisma.resultRow.count()).toBe(2);
+    });
+
+    it("stops after 200 messages without calling the model, and says so in the state (review R2)", async () => {
       await say("Load", load("customer_spending", y2025));
-      await prisma.analysisSession.updateMany({ data: { messageCount: 200 } });
-      const { reply } = await orchestrator.handleMessage(authSessionId, userId, "more");
+      expect((await orchestrator.getState(authSessionId, userId)).notice).toBeNull();
+      await prisma.analysisSession.updateMany({ data: { messageCount: 199 } });
+      expect((await orchestrator.getState(authSessionId, userId)).notice).toBe(
+        ANSWERS.messageLimit,
+      );
+      const { reply, state } = await orchestrator.handleMessage(authSessionId, userId, "more");
       expect(reply.text).toBe(ANSWERS.messageLimit);
+      expect(state.notice).toBe(ANSWERS.messageLimit);
       expect(llm.calls).toHaveLength(1);
+    });
+
+    it("keeps the result consistent when a switch is confirmed while a message arrives (review R10b)", async () => {
+      await say("Load", load("customer_spending", y2025));
+      await say("Products", load("product_sales_performance", y2025));
+      llm.push(refine({ limit: 5 }));
+      await Promise.all([
+        orchestrator.handleSwitch(authSessionId, userId, "switch"),
+        orchestrator.handleMessage(authSessionId, userId, "five rows"),
+      ]);
+      const session = await prisma.analysisSession.findFirstOrThrow();
+      const sets = await prisma.resultSet.findMany();
+      expect(sets).toHaveLength(1);
+      expect(session.activeResultSetId).toBe(sets[0]?.id);
+      expect(session.pendingAction).toBeNull();
+      const seqs = (await prisma.analysisMessage.findMany({ orderBy: { seq: "asc" } })).map(
+        (m) => m.seq,
+      );
+      expect(seqs).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+      // Either order is valid: switch first (products, then limit 5), or the message first
+      // (it clears the pending switch, so the button finds nothing to confirm).
+      const state = await orchestrator.getState(authSessionId, userId);
+      if (state.activeResult?.capability === "product_sales_performance") {
+        expect(data.calls).toHaveLength(2);
+        expect(state.activeResult.view.limit).toBe(5);
+      } else {
+        expect(data.calls).toHaveLength(1);
+        expect(state.activeResult?.view.limit).toBe(5);
+        expect(state.messages.at(-1)?.text).toBe(ANSWERS.noPendingSwitch);
+      }
     });
 
     it("processes simultaneous messages one at a time (TD-7)", async () => {

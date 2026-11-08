@@ -401,11 +401,16 @@ export function validateAnalysis(
         message: "The share must be between 0 and 100 percent.",
       });
     }
-    if (top_count !== undefined && !(Number.isInteger(top_count) && top_count >= 1)) {
+    // Bounded by the row cap: no stored result is larger, and an unbounded number would overflow
+    // the SQL cast (review R3).
+    if (
+      top_count !== undefined &&
+      !(Number.isInteger(top_count) && top_count >= 1 && top_count <= capability.rowCap)
+    ) {
       return fail({
         code: "invalid_value",
         field: "top_count",
-        message: "The top count must be a whole number of at least 1.",
+        message: `The top count must be a whole number from 1 to ${capability.rowCap.toLocaleString("en-US")}.`,
       });
     }
     return { ok: true, analysis };

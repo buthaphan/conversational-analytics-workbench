@@ -15,3 +15,23 @@ Record only material decisions or change requests. Keep pending questions visibl
 - **Decision rationale/date:** Lets the user see and review the workflow before credentials are set up. 2026-11-08.
 - **Required document/evidence updates:** `01-spec.md` (demo-model criterion and manual walkthrough).
 - **Impact on completed work:** None.
+
+## DEC-002 — Turn lock and session end (review R1, R7)
+
+- **Raised:** 2026-11-08 (task review round 1)
+- **Status:** Approved
+- **Discovery and evidence:**
+  - Each turn holds the analysis session's row lock for its whole transaction (up to 120 s), including the model call and the retrieval.
+  - A session end (sign-out, expiry, or replacement) during a slow turn makes the 5 s cleanup transaction time out. The analysis data then stays until the sweeper retries (R1).
+  - A sign-in elsewhere during a turn of about 25 s or more fails (R1).
+  - A refresh during a slow first turn can fail to load (R7).
+  - With the demo model and the fixture, turns are instant, so none of this occurs in TASK-003.
+- **Options and tradeoffs:**
+  1. **Fix in TASK-003:** release the lock before the model call and re-check the facts afterwards, or give cleanup a longer lock wait. More work now, tuned without real latencies.
+  2. **Defer to TASK-004:** that task introduces real latency and can measure it. It is recorded as required work in the handover.
+- **Recommendation:** Option 2.
+- **User decision:** Option 2, defer to TASK-004.
+- **Decision rationale/date:** The issue is latent until a real model is connected. 2026-11-08.
+- **Required document/evidence updates:** `TASK-004-HANDOVER.md` (required work), `03-implementation-notes.md`.
+- **Impact on completed work:** None.
+
