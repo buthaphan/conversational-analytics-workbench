@@ -11,12 +11,17 @@
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "live:profile": "node --env-file-if-exists=../.env ../node_modules/vitest/vitest.mjs run --config vitest.live.config.mts src/live/profile",
+    "live:test": "node --env-file-if-exists=../.env ../node_modules/vitest/vitest.mjs run --config vitest.live.config.mts src/live/known-answer",
+    "live:eval": "node --env-file-if-exists=../.env ../node_modules/vitest/vitest.mjs run --config vitest.live.config.mts src/live/eval",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "npm run build && node --env-file-if-exists=../.env dist/seed/seed-cli.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0",
+    "@google-cloud/bigquery": "^9.6.0",
     "@nestjs/common": "^12.4.0",
     "@nestjs/core": "^12.4.0",
     "@nestjs/platform-express": "^12.4.0",

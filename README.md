@@ -11,7 +11,8 @@ A portfolio showcase for exploring business data with natural-language questions
 - **TASK-002 (design system):** complete. The design tokens, components, and chart theme are in `web/`.
 - **TASK-001 (user accounts and sign-in):** complete. The NestJS API (`api/`), PostgreSQL, sign-in and sign-out with server-side sessions, and Docker Compose.
 - **TASK-003 (conversational workflow):** complete. The analysis workspace, the backend rules that decide what each question may do, and a development demo model, all without cloud credentials ([architecture proposal](docs/ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md)).
-- **Next:** TASK-004 connects BigQuery and Claude ([handover](docs/work/completed/TASK-003-conversational-workflow/TASK-004-HANDOVER.md)).
+- **TASK-004 (real data and AI adapters):** complete. BigQuery (TheLook) and Claude Sonnet 5.5 behind the same workflow ([task records](docs/work/completed/TASK-004-data-and-ai-adapters/)).
+- **Next:** not chosen yet; candidates go through an idea record first.
 
 See `docs/PROJECT-SETUP.md` for decisions and open items, and `docs/work/` for task records.
 
@@ -49,9 +50,27 @@ After signing in, the workspace shows the conversation, the active result (a bar
 
 - **How a question is handled:** a model reads the question and proposes one structured decision (refine, analyse, change the view, load data, confirm a switch, ask a question, or reply). The API checks that decision against the stored result and decides what actually happens. Every figure comes from the API, computed from the stored rows; the model never sees the rows or the figures.
 - **Switching data:** loading a different capability or period replaces the current result, so the workspace asks first (**Switch** or **Keep current**).
-- **Data:** until TASK-004, results come from a deterministic synthetic fixture shaped like TheLook (about 400 customers and 120 products, 2024 to 2026).
+- **One turn at a time:** while a question is being answered, a second message gets a "still answering" reply, and a refreshed page shows a notice until the answer arrives. Signing out never waits for a slow answer.
 
-**Demo mode.** TASK-003 has no AI model. With `ANALYSIS_MODEL=demo` (the default outside production), a development demo model recognises a fixed list of example questions and returns the decision a real model should return. The workspace shows a "Demo mode" banner and the examples as buttons; any other text gets the list of examples. The API refuses to start with the demo model when `NODE_ENV=production`.
+**Model and data.** Two settings in `.env` choose them:
+
+|                  | Development default (no credentials, no cost)                                                       | Real                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `ANALYSIS_MODEL` | `demo`: recognises a fixed list of example questions (shown as buttons under a "Demo mode" banner)  | `claude`: Claude Sonnet 5.5 via the Anthropic API      |
+| `DATA_SOURCE`    | `fixture`: a deterministic synthetic set shaped like TheLook (about 400 customers and 120 products) | `bigquery`: Google's public, synthetic TheLook dataset |
+
+Production refuses `demo` and `fixture`. Docker Compose uses the development defaults; run the real adapters with the npm dev servers.
+
+**Using the real adapters** (each needs your own account; the keys stay outside this repository):
+
+- **BigQuery:** create a Google Cloud project with the BigQuery API enabled (the free Sandbox is enough), run `gcloud auth application-default login` (the credentials file stays in your user profile), and set `DATA_SOURCE=bigquery` and `GOOGLE_CLOUD_PROJECT=<project id>` in `.env`. Each question that loads data scans about 10 MB, well inside the Sandbox's free monthly allowance; every query is capped at 1 GB.
+- **Claude:** create an API key in the Anthropic Console, set a spend limit there (or keep prepaid credit with auto-reload off), and set `ANALYSIS_MODEL=claude` and `ANTHROPIC_API_KEY=<key>` in `.env`. A turn costs about $0.0025 and takes about 2 s (measured, see below).
+
+**Live checks** (never part of `npm test` or CI; each skips without its credentials):
+
+- `npm run live:profile -w api`: profiles TheLook (free). Results: [docs/product/THELOOK-PROFILE.md](docs/product/THELOOK-PROFILE.md).
+- `npm run live:test -w api`: known-answer check. The BigQuery queries must match the reference calculation rules exactly (free).
+- `npm run live:eval -w api`: 37 model decision cases, about $0.09 per run. Passes at 90% overall and 100% of the safety cases. `EVAL_SAVE_BASELINE=1` stores the result in `api/src/live/eval/`, the baseline for comparing models later (`ANTHROPIC_MODEL` selects another model).
 
 **Checks:** `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test` (API tests need the database running), and `npm run build`.
 

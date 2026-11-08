@@ -56,6 +56,10 @@ model AnalysisSession {
   /// A pending switch or clarification awaiting the user (TD-8).
   pendingAction     Json?            @map("pending_action")
   messageCount      Int              @default(0) @map("message_count")
+  /// The turn currently being answered, if any (TASK-004 AC-1). Set and cleared by short locked
+  /// steps; no lock is held while the model or the data source works.
+  turnId            String?          @map("turn_id") @db.Uuid
+  turnStartedAt     DateTime?        @map("turn_started_at") @db.Timestamptz(3)
   createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
   authSession       AuthSession      @relation(fields: [authSessionId], references: [id], onDelete: Cascade)

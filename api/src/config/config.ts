@@ -1,6 +1,13 @@
 export type NodeEnv = "development" | "test" | "production";
-/** `demo`: the development demo model (DEC-001). `none`: no model yet; TASK-004 adds the Claude adapter. */
-export type AnalysisModel = "demo" | "none";
+/**
+ * `demo`: the development demo model (TASK-003 DEC-001). `none`: no model; every question gets the
+ * generic error. `claude`: the Anthropic API (TASK-004 AC-3).
+ */
+export type AnalysisModel = "demo" | "none" | "claude";
+/** `fixture`: the deterministic TASK-003 fixture. `bigquery`: TheLook in BigQuery (TASK-004). */
+export type DataSourceConfig = { kind: "fixture" } | { kind: "bigquery"; projectId: string };
+
+export const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5-5";
 
 export interface AppConfig {
   nodeEnv: NodeEnv;
@@ -18,6 +25,10 @@ export interface AppConfig {
   host: string;
   /** Which model decides each analysis turn (TASK-003 AC-15). */
   analysisModel: AnalysisModel;
+  /** Set only when `analysisModel` is `claude`. The key comes from the environment only. */
+  anthropic: { apiKey: string; model: string } | null;
+  /** Where results are retrieved from (TASK-004 AC-3). */
+  dataSource: DataSourceConfig;
 }
 
 export const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
@@ -72,15 +83,44 @@ function parseNodeEnv(env: Env): NodeEnv {
 
 function parseAnalysisModel(env: Env, nodeEnv: NodeEnv): AnalysisModel {
   const value = env.ANALYSIS_MODEL?.trim() || (nodeEnv === "production" ? "none" : "demo");
-  if (value !== "demo" && value !== "none") {
-    throw new Error(`ANALYSIS_MODEL must be demo or none (got "${value}").`);
+  if (value !== "demo" && value !== "none" && value !== "claude") {
+    throw new Error(`ANALYSIS_MODEL must be demo, none, or claude (got "${value}").`);
   }
   return value;
+}
+
+/** Error messages name the variable and never echo the key. */
+function parseAnthropic(env: Env, model: AnalysisModel): AppConfig["anthropic"] {
+  if (model !== "claude") return null;
+  const apiKey = env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required when ANALYSIS_MODEL=claude.");
+  const modelId = env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
+  if (!/^[a-z0-9][a-z0-9.-]*$/.test(modelId)) {
+    throw new Error(`ANTHROPIC_MODEL must be a model ID such as ${DEFAULT_ANTHROPIC_MODEL}.`);
+  }
+  return { apiKey, model: modelId };
+}
+
+function parseDataSource(env: Env, nodeEnv: NodeEnv): DataSourceConfig {
+  const kind = env.DATA_SOURCE?.trim() || (nodeEnv === "production" ? "bigquery" : "fixture");
+  if (kind === "fixture") return { kind };
+  if (kind !== "bigquery")
+    throw new Error(`DATA_SOURCE must be fixture or bigquery (got "${kind}").`);
+  const projectId = env.GOOGLE_CLOUD_PROJECT?.trim();
+  if (!projectId) throw new Error("GOOGLE_CLOUD_PROJECT is required when DATA_SOURCE=bigquery.");
+  // Google Cloud project IDs: 6–30 characters, lower-case letters, digits, and hyphens.
+  if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(projectId)) {
+    throw new Error(
+      "GOOGLE_CLOUD_PROJECT must be a Google Cloud project ID such as my-project-123.",
+    );
+  }
+  return { kind, projectId };
 }
 
 /** Reads and validates configuration. Throws on anything unsafe, so the API refuses to start. */
 export function loadConfig(env: Env): AppConfig {
   const nodeEnv = parseNodeEnv(env);
+  const analysisModel = parseAnalysisModel(env, nodeEnv);
   const config: AppConfig = {
     nodeEnv,
     databaseUrl: required(env, "DATABASE_URL"),
@@ -90,7 +130,9 @@ export function loadConfig(env: Env): AppConfig {
     maxSessionMs: MAX_SESSION_MS,
     port: Number(env.API_PORT || 3000),
     host: env.API_HOST?.trim() || "127.0.0.1",
-    analysisModel: parseAnalysisModel(env, nodeEnv),
+    analysisModel,
+    anthropic: parseAnthropic(env, analysisModel),
+    dataSource: parseDataSource(env, nodeEnv),
   };
 
   if (config.nodeEnv === "production") {
@@ -102,6 +144,9 @@ export function loadConfig(env: Env): AppConfig {
     }
     if (config.analysisModel === "demo") {
       throw new Error("ANALYSIS_MODEL=demo is for development only and is refused in production.");
+    }
+    if (config.dataSource.kind === "fixture") {
+      throw new Error("DATA_SOURCE=fixture is for development only and is refused in production.");
     }
   }
   return config;

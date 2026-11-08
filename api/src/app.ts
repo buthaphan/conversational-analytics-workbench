@@ -2,6 +2,7 @@ import { ValidationPipe } from "@nestjs/common";
 import type { NestApplicationOptions } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import cookieParser from "cookie-parser";
+import { SafeExceptionFilter } from "./common/safe-exception.filter";
 
 type SetHeader = (name: string, value: string) => void;
 
@@ -31,5 +32,7 @@ export function configureApp<T extends NestExpressApplication>(app: T): T {
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );
+  // Unexpected errors are logged by class name only (TASK-004 review S2).
+  app.useGlobalFilters(new SafeExceptionFilter(app.getHttpAdapter()));
   return app;
 }

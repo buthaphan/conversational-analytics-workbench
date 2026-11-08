@@ -105,4 +105,26 @@ describe("ChartWithTable (AC-8)", () => {
     const { container } = renderChart();
     await expectNoAxeViolations(container);
   });
+
+  describe("compact (TASK-004 DEC-004)", () => {
+    it("keeps the full table in its own vertically scrolling region with a shorter chart", async () => {
+      const { container } = renderChart({ compact: true });
+      const region = screen.getByRole("region", { name: "Monthly sales" });
+      expect(region).toHaveAttribute("tabindex", "0");
+      expect(region.className).toMatch(/(^|\s)overflow-y-auto(\s|$)/);
+      expect(within(region).getAllByRole("row")).toHaveLength(categories.length + 1);
+      expect(screen.getAllByRole("region")).toHaveLength(1);
+      expect(screen.getByRole("img", { name: /Monthly sales chart/ }).className).not.toContain(
+        "h-80",
+      );
+      await expectNoAxeViolations(container);
+    });
+
+    it("does not limit the table height by default", () => {
+      renderChart();
+      expect(screen.getByRole("region", { name: "Monthly sales" }).className).not.toMatch(
+        /overflow-y-auto/,
+      );
+    });
+  });
 });

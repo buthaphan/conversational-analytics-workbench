@@ -217,6 +217,22 @@ describe("model context (AC-5, TD-9)", () => {
     expect(context.recentTurns.at(-1)).toEqual({ role: "user", text: "question 29" });
   });
 
+  it("appends a not-yet-stored latest message within the same window (TASK-004 AC-1)", async () => {
+    const sessionId = await seed("customer_spending");
+    await prisma.analysisMessage.createMany({
+      data: Array.from({ length: 30 }, (_, i) => ({
+        analysisSessionId: sessionId,
+        seq: 10 + i,
+        role: "user",
+        text: `question ${i}`,
+      })),
+    });
+    const context = await builder.build(sessionId, today, undefined, "the new one");
+    expect(context.recentTurns).toHaveLength(20);
+    expect(context.recentTurns.at(-2)).toEqual({ role: "user", text: "question 29" });
+    expect(context.recentTurns.at(-1)).toEqual({ role: "user", text: "the new one" });
+  });
+
   it("has no active result or pending action for a new conversation", async () => {
     const user = await prisma.user.create({ data: { email: "n@example.test", passwordHash: "x" } });
     const now = new Date();

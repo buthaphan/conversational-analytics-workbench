@@ -7,6 +7,8 @@ const production = {
   NODE_ENV: "production",
   APP_ORIGIN: "https://showcase.example.test",
   COOKIE_SECURE: "true",
+  // Production defaults to BigQuery (TASK-004 AC-3); no query runs at startup.
+  GOOGLE_CLOUD_PROJECT: "cawb-test-123",
 };
 
 describe("production refuses to start with the development account (AC-12)", () => {

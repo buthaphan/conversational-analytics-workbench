@@ -8,22 +8,23 @@ import { describeFilter, formatCell, formatCount, formatDateRange, nounFor } fro
 export function ScopeSummary({ result }: { result: ActiveResult }) {
   const { rowNoun, rowCount, filteredCount, view } = result;
   return (
-    <Card title={result.title} headingLevel={2}>
-      <dl className="grid gap-x-6 gap-y-2 text-body-sm sm:grid-cols-[auto_1fr]">
-        <dt className="text-fg-secondary">Period</dt>
+    <Card title={result.title} headingLevel={2} compact>
+      {/* Compact: two term/value pairs per row on wide screens, small text (TASK-004 DEC-004). */}
+      <dl className="grid gap-x-4 gap-y-1 text-body-sm sm:grid-cols-[auto_1fr] xl:grid-cols-[auto_1fr_auto_1fr]">
+        <dt className="font-semibold">Period</dt>
         <dd>{formatDateRange(result.scope)}</dd>
-        <dt className="text-fg-secondary">Result</dt>
+        <dt className="font-semibold">Result</dt>
         <dd>
           {formatCount(rowCount)} {nounFor(rowNoun, rowCount)} in the result
           {view.filters.length > 0 && `; ${formatCount(filteredCount)} match the filters`}
         </dd>
-        <dt className="text-fg-secondary">Filters</dt>
+        <dt className="font-semibold">Filters</dt>
         <dd>
           {view.filters.length > 0
             ? view.filters.map((f) => describeFilter(result.fields, f)).join("; ")
             : "None"}
         </dd>
-        <dt className="text-fg-secondary">Showing</dt>
+        <dt className="font-semibold">Showing</dt>
         <dd>
           {formatCount(result.rows.length)} of {formatCount(filteredCount)}, by{" "}
           {(
@@ -36,6 +37,14 @@ export function ScopeSummary({ result }: { result: ActiveResult }) {
   );
 }
 
+/**
+ * On wide screens the table takes the window height left after the header, the scope summary, and
+ * (in the bar view) the chart, so the page itself does not scroll; never less than 10rem
+ * (TASK-004 DEC-004). The offsets are those fixed parts in rem.
+ */
+const FILL_WITH_CHART = "lg:max-h-[max(10rem,calc(100vh_-_37rem))]";
+const FILL_TABLE_ONLY = "lg:max-h-[max(10rem,calc(100vh_-_21rem))]";
+
 /** The displayed rows as a bar chart with its table, or as a table of every field. */
 export function ResultArea({ result }: { result: ActiveResult }) {
   const labelField = result.fields.find((f) => f.kind === "label") ?? result.fields[0]!;
@@ -46,7 +55,8 @@ export function ResultArea({ result }: { result: ActiveResult }) {
 
   if (result.view.view === "bar") {
     return (
-      <Card>
+      // Stretches on wide screens; the chart takes the spare height (TASK-004 DEC-004).
+      <Card className="lg:flex-1" stretch>
         <ChartWithTable
           title={title}
           categoryLabel={labelField.label}
@@ -55,6 +65,8 @@ export function ResultArea({ result }: { result: ActiveResult }) {
             { name: sortField.label, values: result.rows.map((r) => Number(r[sortField.name])) },
           ]}
           formatValue={(v) => formatCell(sortField, v)}
+          compact
+          tableClassName={FILL_WITH_CHART}
         />
       </Card>
     );
@@ -76,6 +88,9 @@ export function ResultArea({ result }: { result: ActiveResult }) {
         rows={result.rows}
         rowKey={(row) => String(row[idField.name])}
         emptyMessage={`No ${result.rowNoun[1]} match the filters.`}
+        maxHeight="md"
+        dense
+        className={FILL_TABLE_ONLY}
       />
     </Card>
   );

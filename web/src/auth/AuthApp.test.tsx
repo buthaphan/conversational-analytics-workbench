@@ -1,7 +1,8 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectNoAxeViolations } from "../test/axe";
+import logoOnDark from "../logo-on-dark.svg";
 import { mockFetch } from "../test/fetch";
 import { AuthApp, KEEP_ALIVE_MS } from "./AuthApp";
 
@@ -42,6 +43,25 @@ describe("signed-in shell and session end (AC-14)", () => {
     expect(screen.getByText("user@example.test")).toBeInTheDocument();
     expect(screen.getByText("Workspace content")).toBeInTheDocument();
     await expectNoAxeViolations(container);
+  });
+
+  it("uses the navy header with the light logo and light text (TASK-004 DEC-004)", async () => {
+    mockFetch({ "GET /api/auth/session": { status: 200, body: { user } } });
+    const { container } = render(<AuthApp workspace={stubWorkspace} />);
+    const signOut = await screen.findByRole("button", { name: "Sign out" });
+    const header = container.querySelector("header") as HTMLElement;
+    expect(header.className).toMatch(/(^|\s)bg-brand-navy(\s|$)/);
+    // Logo only: it is the page heading (named by its alt text); no repeated title text.
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Conversational Analytics Workbench",
+    });
+    const logo = within(heading).getByRole("img", { name: "Conversational Analytics Workbench" });
+    expect(logo.getAttribute("src")).toBe(logoOnDark);
+    expect(screen.queryByText("Conversational Analytics Workbench")).toBeNull();
+    expect(screen.getByText("user@example.test").className).toMatch(/(^|\s)text-on-primary(\s|$)/);
+    // The default teal focus ring is too faint on navy.
+    expect(signOut.className).toMatch(/focus-visible:outline-on-primary/);
   });
 
   it("keeps the session alive every 2 minutes", async () => {

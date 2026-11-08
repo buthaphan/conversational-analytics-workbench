@@ -13,7 +13,13 @@ vi.mock("echarts-for-react", () => ({
 }));
 vi.mock("echarts", () => ({ registerTheme: () => {} }));
 
-const empty: AnalysisState = { messages: [], activeResult: null, pending: null, notice: null };
+const empty: AnalysisState = {
+  messages: [],
+  activeResult: null,
+  pending: null,
+  notice: null,
+  turnInProgress: false,
+};
 const examples = ["Who spent the most last year?", "Show this as a table"];
 
 const result: ActiveResult = {
@@ -49,6 +55,7 @@ const loaded: AnalysisState = {
   activeResult: result,
   pending: null,
   notice: null,
+  turnInProgress: false,
 };
 
 const stateRoute = (state: AnalysisState, demoExamples: string[] | null = null) => ({
@@ -118,6 +125,79 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
         .map((h) => h.textContent),
     ).toEqual(["Customer", "Customer ID", "Total spend", "Orders"]);
     expect(within(table).getByRole("cell", { name: "3" })).toBeInTheDocument();
+  });
+
+  it("fills the window height on wide screens, letting the chart take the spare room (TASK-004 DEC-004)", async () => {
+    mockFetch(stateRoute(loaded));
+    render(<Workspace onSessionEnded={() => {}} />);
+    const chart = await screen.findByRole("img", { name: /chart\. Exact values/ });
+    // The two-column grid is at least as tall as the window below the header.
+    const grid = chart.closest("[data-testid='workspace-grid']") as HTMLElement;
+    expect(grid.className).toMatch(/lg:min-h-\[[^\]]*100vh/);
+    // The result card and the chart stretch; the chart keeps a minimum height.
+    expect(chart.className).toMatch(/(^|\s)lg:flex-1(\s|$)/);
+    expect(chart.className).toMatch(/(^|\s)min-h-56(\s|$)/);
+    expect(chart.closest("section")?.className).toMatch(/(^|\s)lg:flex-1(\s|$)/);
+  });
+
+  it("keeps a minimum conversation height when it follows the result column (review S1)", async () => {
+    mockFetch(stateRoute(loaded, examples));
+    render(<Workspace onSessionEnded={() => {}} />);
+    const history = await screen.findByRole("region", { name: "Conversation history" });
+    const wrapper = history.closest("section")?.parentElement as HTMLElement;
+    expect(wrapper.className).toMatch(/(^|\s)lg:min-h-\[28rem\](\s|$)/);
+  });
+
+  it("matches the conversation's height to the result column on wide screens (TASK-004 DEC-004)", async () => {
+    mockFetch(stateRoute(loaded));
+    render(<Workspace onSessionEnded={() => {}} />);
+    const history = await screen.findByRole("region", { name: "Conversation history" });
+    const section = history.closest("section") as HTMLElement;
+    // Out of the grid's height calculation, filling the row the result column sets.
+    expect(section.className).toMatch(/(^|\s)lg:absolute(\s|$)/);
+    expect(section.className).toMatch(/(^|\s)lg:inset-0(\s|$)/);
+    expect(history.className).toMatch(/(^|\s)lg:flex-1(\s|$)/);
+    expect(history.className).toMatch(/(^|\s)lg:min-h-0(\s|$)/);
+  });
+
+  it("scrolls the conversation inside a fixed, bordered frame (TASK-004 DEC-004)", async () => {
+    mockFetch(stateRoute(loaded));
+    render(<Workspace onSessionEnded={() => {}} />);
+    const history = await screen.findByRole("region", { name: "Conversation history" });
+    expect(history.className).toMatch(/(^|\s)overflow-y-auto(\s|$)/);
+    expect(history.className).toMatch(/(^|\s)border(\s|$)/);
+  });
+
+  it("keeps the result table in a keyboard-scrollable region, in both views (TASK-004 DEC-004)", async () => {
+    mockFetch(stateRoute(loaded));
+    const { unmount } = render(<Workspace onSessionEnded={() => {}} />);
+    const chartTable = await screen.findByRole("region", {
+      name: "Total spend by customer (highest first)",
+    });
+    expect(chartTable).toHaveAttribute("tabindex", "0");
+    expect(chartTable.className).toMatch(/(^|\s)overflow-y-auto(\s|$)/);
+    // On wide screens the table takes the height left in the window, so the page does not scroll.
+    expect(chartTable.className).toMatch(/lg:max-h-\[[^\]]*100vh/);
+    // The chart title above already names it, so the table caption is only for screen readers.
+    expect(
+      within(chartTable).getByText("Total spend by customer (highest first)").className,
+    ).toMatch(/(^|\s)sr-only(\s|$)/);
+    expect(within(chartTable).getByRole("table")).toBeInTheDocument();
+    unmount();
+
+    mockFetch(
+      stateRoute({
+        ...loaded,
+        activeResult: { ...result, view: { ...result.view, view: "table" } },
+      }),
+    );
+    render(<Workspace onSessionEnded={() => {}} />);
+    const table = await screen.findByRole("region", {
+      name: "Total spend by customer (highest first)",
+    });
+    expect(table).toHaveAttribute("tabindex", "0");
+    expect(table.className).toMatch(/(^|\s)overflow-y-auto(\s|$)/);
+    expect(table.className).toMatch(/lg:max-h-\[[^\]]*100vh/);
   });
 
   it("sends a message, announces the reply politely, and keeps focus in the input", async () => {
@@ -430,5 +510,152 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
     reachable = true;
     await u.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByRole("textbox", { name: "Ask a question" })).toBeInTheDocument();
+  });
+});
+
+describe("a turn in progress (TASK-004 AC-2)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const STILL = "Still answering your last message…";
+  const answered: AnalysisState = {
+    ...loaded,
+    messages: [
+      { seq: 1, role: "user", text: "The previous calendar year" },
+      { seq: 2, role: "assistant", text: "Showing 2 of 87 customers…" },
+    ],
+  };
+  /** Serves the given states in order; the last one repeats. */
+  const states = (...list: AnalysisState[]) => {
+    let i = 0;
+    return {
+      "GET /api/analysis/state": () => ({
+        status: 200,
+        body: { ...list[Math.min(i++, list.length - 1)], demoExamples: null },
+      }),
+    };
+  };
+  const fast = { pollIntervalMs: 10, turnDeadlineMs: 5000 };
+
+  it("after a refresh mid-turn, shows the notice, blocks sending, and shows the answer when it lands", async () => {
+    mockFetch(
+      states({ ...empty, turnInProgress: true }, { ...empty, turnInProgress: true }, answered),
+    );
+    const u = userEvent.setup();
+    const { container } = render(<Workspace onSessionEnded={() => {}} {...fast} />);
+    expect(await screen.findByText(STILL)).toBeInTheDocument();
+    expect(screen.getByText(STILL).closest('[role="status"]')).not.toBeNull();
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(send).toHaveAttribute("aria-disabled", "true");
+    await expectNoAxeViolations(container);
+
+    // Typing stays possible, so nothing is lost.
+    await u.type(screen.getByRole("textbox", { name: "Ask a question" }), "next");
+
+    const log = await screen.findByRole("list", { name: "Conversation" });
+    expect(within(log).getByText("Showing 2 of 87 customers…")).toBeInTheDocument();
+    expect(screen.queryByText(STILL)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).not.toHaveAttribute("aria-disabled");
+    expect(screen.getByTestId("reply-announcer")).toHaveTextContent("Showing 2 of 87 customers…");
+    expect(screen.getByRole("textbox", { name: "Ask a question" })).toHaveValue("next");
+  });
+
+  it("on a 409 reply, keeps the typed text, shows the notice, and waits for the running turn", async () => {
+    let posted = false;
+    mockFetch({
+      "GET /api/analysis/state": () => ({
+        status: 200,
+        body: posted
+          ? { ...answered, turnInProgress: false, demoExamples: null }
+          : { ...empty, turnInProgress: false, demoExamples: null },
+      }),
+      "POST /api/analysis/messages": () => {
+        posted = true;
+        return { status: 409, body: { code: "turn_in_progress", message: "busy" } };
+      },
+    });
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} {...fast} />);
+    const input = await screen.findByRole("textbox", { name: "Ask a question" });
+    await u.type(input, "hello");
+    await u.click(screen.getByRole("button", { name: "Send" }));
+    const log = await screen.findByRole("list", { name: "Conversation" });
+    expect(within(log).getByText("The previous calendar year")).toBeInTheDocument();
+    expect(input).toHaveValue("hello");
+    expect(screen.queryByText("Could not send your message. Try again.")).not.toBeInTheDocument();
+  });
+
+  it("returns to sign-in when the session ends while waiting", async () => {
+    let calls = 0;
+    mockFetch({
+      "GET /api/analysis/state": () =>
+        calls++ === 0
+          ? { status: 200, body: { ...empty, turnInProgress: true, demoExamples: null } }
+          : { status: 401, body: {} },
+    });
+    const ended = vi.fn();
+    render(<Workspace onSessionEnded={ended} {...fast} />);
+    await waitFor(() => expect(ended).toHaveBeenCalledTimes(1));
+  });
+
+  // Neutral wording: the turn may have expired or failed (review round 2).
+  const DROPPED = "Your last message wasn't answered. Please send it again.";
+
+  it("says so when the turn ends without an answer, as the real API reports an expired turn (review R1)", async () => {
+    // Waiting began with 2 messages; the turn then expires on the server with no new message.
+    mockFetch(
+      states({ ...answered, turnInProgress: true }, { ...answered, turnInProgress: false }),
+    );
+    const { container } = render(<Workspace onSessionEnded={() => {}} {...fast} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(DROPPED);
+    expect(screen.queryByText(STILL)).not.toBeInTheDocument();
+    expect(screen.getByTestId("reply-announcer")).toHaveTextContent(DROPPED);
+    expect(screen.getByRole("button", { name: "Send" })).not.toHaveAttribute("aria-disabled");
+    await expectNoAxeViolations(container);
+  });
+
+  it("does not show the dropped message when the answer arrives", async () => {
+    mockFetch(states({ ...empty, turnInProgress: true }, answered));
+    render(<Workspace onSessionEnded={() => {}} {...fast} />);
+    await screen.findByRole("list", { name: "Conversation" });
+    expect(screen.queryByText(DROPPED)).not.toBeInTheDocument();
+  });
+
+  it("tells the user a dropped turn was not answered, keeping the typed text, and refreshes (review S4)", async () => {
+    // The newer turn (from another tab) has answered by the time this tab refreshes.
+    mockFetch({
+      ...states(empty, answered),
+      "POST /api/analysis/messages": {
+        status: 409,
+        body: { code: "turn_superseded", message: "x" },
+      },
+    });
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} {...fast} />);
+    const input = await screen.findByRole("textbox", { name: "Ask a question" });
+    await u.type(input, "hello");
+    await u.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(DROPPED);
+    expect(screen.queryByText(STILL)).not.toBeInTheDocument();
+    expect(input).toHaveValue("hello");
+    const log = await screen.findByRole("list", { name: "Conversation" });
+    expect(within(log).getByText("Showing 2 of 87 customers…")).toBeInTheDocument();
+  });
+
+  it("stops waiting after the turn deadline and offers a retry", async () => {
+    const fetchMock = mockFetch(states({ ...empty, turnInProgress: true }));
+    const { container } = render(
+      <Workspace onSessionEnded={() => {}} pollIntervalMs={10} turnDeadlineMs={60} />,
+    );
+    expect(
+      await screen.findByText("This is taking longer than expected. Try again in a moment."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(STILL)).not.toBeInTheDocument();
+    const calls = fetchMock.mock.calls.length;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(fetchMock.mock.calls.length).toBe(calls);
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    await expectNoAxeViolations(container);
   });
 });

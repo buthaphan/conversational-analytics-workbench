@@ -2,6 +2,7 @@ import { registerTheme } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useId } from "react";
 import { Table, type TableColumn } from "../components/ui/Table";
+import { cn } from "../lib/cn";
 import { CHART_THEME_NAME, chartTheme } from "./chartTheme";
 
 registerTheme(CHART_THEME_NAME, chartTheme);
@@ -20,6 +21,10 @@ export interface ChartWithTableProps {
   series: ChartSeries[];
   type?: "bar" | "line";
   formatValue?: (value: number) => string;
+  /** A shorter chart, and the table in its own scroll region, so the whole view fits one screen. */
+  compact?: boolean;
+  /** Extra classes for the table region, e.g. a window-based maximum height. */
+  tableClassName?: string;
 }
 
 type TableRow = Record<string, string | number>;
@@ -35,6 +40,8 @@ export function ChartWithTable({
   series,
   type = "bar",
   formatValue = (v) => String(v),
+  compact = false,
+  tableClassName,
 }: ChartWithTableProps) {
   const captionId = useId();
 
@@ -73,7 +80,11 @@ export function ChartWithTable({
   };
 
   return (
-    <figure aria-labelledby={captionId} className="flex flex-col gap-4">
+    <figure
+      aria-labelledby={captionId}
+      // Compact: on wide screens the figure fills its container and the chart takes the spare height.
+      className={cn("flex flex-col", compact ? "gap-3 lg:flex-1" : "gap-4")}
+    >
       <figcaption id={captionId} className="text-h3 text-fg">
         {title}
       </figcaption>
@@ -83,7 +94,7 @@ export function ChartWithTable({
         <div
           role="img"
           aria-label={`${title} chart. Exact values are in the table below.`}
-          className="h-80 w-full"
+          className={cn("w-full", compact ? "h-56 min-h-56 lg:h-auto lg:flex-1" : "h-80")}
         >
           <ReactECharts
             option={option}
@@ -92,7 +103,14 @@ export function ChartWithTable({
           />
         </div>
       )}
-      <Table caption={title} columns={columns} rows={rows} rowKey={(row) => String(row.rowIndex)} />
+      <Table
+        caption={title}
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => String(row.rowIndex)}
+        {...(compact ? { maxHeight: "sm" as const, dense: true, hideCaption: true } : {})}
+        {...(tableClassName ? { className: tableClassName } : {})}
+      />
     </figure>
   );
 }

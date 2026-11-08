@@ -58,7 +58,8 @@ const OUTCOME_KEYS = [
 const SCOPE_RULE =
   "start_date (inclusive) and end_date (exclusive), YYYY-MM-DD, at most 5 years apart. Changing the scope needs new data.";
 
-function catalogue(): ModelContext["catalogue"] {
+/** The fixed catalogue part of the context; exported for the model evaluation (TASK-004 AC-10). */
+export function buildCatalogue(): ModelContext["catalogue"] {
   return Object.values(CAPABILITIES).map((c) => {
     const numeric = c.fields
       .filter((f) => f.kind === "money" || f.kind === "integer")
@@ -92,11 +93,16 @@ export class ModelContextBuilder {
     private readonly engine: ResultEngine,
   ) {}
 
-  /** `db` lets a turn build the context inside its own transaction, seeing its latest message. */
+  /**
+   * `db` lets a turn build the context inside its own transaction. `latestUserText` is the turn's
+   * message when it is not stored yet (the two-phase turn stores it with the outcome, TASK-004 AC-1);
+   * it is appended as the last turn.
+   */
   async build(
     analysisSessionId: string,
     today: Date,
     db: Prisma.TransactionClient = this.prisma,
+    latestUserText?: string,
   ): Promise<ModelContext> {
     const session = await db.analysisSession.findUniqueOrThrow({
       where: { id: analysisSessionId },
@@ -110,7 +116,7 @@ export class ModelContextBuilder {
     const messages = await db.analysisMessage.findMany({
       where: { analysisSessionId },
       orderBy: { seq: "desc" },
-      take: TURN_WINDOW_MESSAGES,
+      take: latestUserText === undefined ? TURN_WINDOW_MESSAGES : TURN_WINDOW_MESSAGES - 1,
       select: { role: true, text: true, payload: true },
     });
 
@@ -119,7 +125,7 @@ export class ModelContextBuilder {
 
     return {
       today: today.toISOString().slice(0, 10),
-      catalogue: catalogue(),
+      catalogue: buildCatalogue(),
       activeResult:
         active && capability
           ? {
@@ -132,15 +138,18 @@ export class ModelContextBuilder {
           : null,
       allowedValues:
         active && capability ? await this.engine.allowedValues(active.id, capability.id, db) : {},
-      recentTurns: messages.reverse().map((m) => {
-        if (m.role === "user") return { role: "user" as const, text: m.text };
-        const payload = (m.payload ?? {}) as { decision?: unknown; outcome?: unknown };
-        return {
-          role: "assistant" as const,
-          decision: payload.decision,
-          outcome: pickOutcome(payload.outcome),
-        };
-      }),
+      recentTurns: [
+        ...messages.reverse().map((m) => {
+          if (m.role === "user") return { role: "user" as const, text: m.text };
+          const payload = (m.payload ?? {}) as { decision?: unknown; outcome?: unknown };
+          return {
+            role: "assistant" as const,
+            decision: payload.decision,
+            outcome: pickOutcome(payload.outcome),
+          };
+        }),
+        ...(latestUserText === undefined ? [] : [{ role: "user" as const, text: latestUserText }]),
+      ],
       pending: session.pendingAction ?? null,
     };
   }

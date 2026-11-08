@@ -38,8 +38,13 @@ export interface CapabilityDef {
 export const DEFAULT_LIMIT = 10;
 export const MAX_LIMIT = 100;
 const MAX_SCOPE_YEARS = 5;
-/** Placeholder until TASK-004 profiles the real data. */
-export const DEFAULT_ROW_CAP = 100_000;
+/**
+ * Row caps from the TheLook profile (TASK-004 AC-8, docs/product/THELOOK-PROFILE.md): the largest
+ * scope (5 years) had about 25,700 customers and 22,100 products; there are 29,120 products in all.
+ * Set only here (review N2): `validateAnalysis` bounds `top_count` by these values.
+ */
+const CUSTOMER_ROW_CAP = 50_000;
+const PRODUCT_ROW_CAP = 50_000;
 
 export const CAPABILITIES: Record<CapabilityId, CapabilityDef> = {
   customer_spending: {
@@ -89,7 +94,7 @@ export const CAPABILITIES: Record<CapabilityId, CapabilityDef> = {
     defaultSort: { field: "total_spend", direction: "desc" },
     concentrationMeasures: ["total_spend", "order_count"],
     groupByFields: [],
-    rowCap: DEFAULT_ROW_CAP,
+    rowCap: CUSTOMER_ROW_CAP,
   },
   product_sales_performance: {
     id: "product_sales_performance",
@@ -123,7 +128,7 @@ export const CAPABILITIES: Record<CapabilityId, CapabilityDef> = {
     defaultSort: { field: "revenue", direction: "desc" },
     concentrationMeasures: ["revenue", "item_count"],
     groupByFields: ["category"],
-    rowCap: DEFAULT_ROW_CAP,
+    rowCap: PRODUCT_ROW_CAP,
   },
 };
 

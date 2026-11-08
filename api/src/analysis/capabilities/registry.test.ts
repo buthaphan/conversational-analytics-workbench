@@ -213,4 +213,23 @@ describe("capability registry (AC-2)", () => {
       if (!result.ok) expect(result.issue.code).toBe(code);
     });
   });
+
+  describe("row caps (TASK-004 AC-8, N2)", () => {
+    it("sets each capability's cap from the TheLook profile (docs/product/THELOOK-PROFILE.md)", () => {
+      expect(CAPABILITIES.customer_spending.rowCap).toBe(50_000);
+      expect(CAPABILITIES.product_sales_performance.rowCap).toBe(50_000);
+    });
+
+    it("bounds top_count by the registry cap", () => {
+      const at = (top_count: number) =>
+        validateAnalysis("customer_spending", {
+          operation: "concentration",
+          measure: "total_spend",
+          top_count,
+          target: "complete",
+        }).ok;
+      expect(at(50_000)).toBe(true);
+      expect(at(50_001)).toBe(false);
+    });
+  });
 });

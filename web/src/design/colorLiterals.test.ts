@@ -66,8 +66,10 @@ describe("no raw color literals outside the token source (AC-6)", () => {
    * Files allowed to contain color literals:
    * - styles/tokens.css: the single source of truth for token values.
    * - logo.svg: the approved brand logo asset (copied from assets/brand/), not UI styling.
+   * - logo-on-dark.svg: the same logo with light wordmark and ring for the navy header
+   *   (TASK-004 DEC-004; copied from assets/brand/).
    */
-  const EXEMPT = new Set(["styles/tokens.css", "logo.svg"]);
+  const EXEMPT = new Set(["styles/tokens.css", "logo.svg", "logo-on-dark.svg"]);
 
   function sourceFiles(dir: string): string[] {
     return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

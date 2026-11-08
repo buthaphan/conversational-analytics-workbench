@@ -84,8 +84,15 @@ export const turnDecisionSchema = z
 export type TurnDecision = z.infer<typeof turnDecisionSchema>;
 export type DecisionAction = TurnDecision["action"];
 
-/** JSON Schema for the model's structured output (used by the Claude adapter in TASK-004). */
-export const TURN_DECISION_JSON_SCHEMA = z.toJSONSchema(turnDecisionSchema, { io: "input" });
+/**
+ * JSON Schema for the model's structured output (used by the Claude adapter, TASK-004). Reused parts
+ * (refinement, filter) are shared definitions, so the API's limit on optional parameters counts them
+ * once.
+ */
+export const TURN_DECISION_JSON_SCHEMA = z.toJSONSchema(turnDecisionSchema, {
+  io: "input",
+  reused: "ref",
+});
 
 export type ParsedDecision = { ok: true; decision: TurnDecision } | { ok: false; error: string };
 

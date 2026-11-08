@@ -24,8 +24,10 @@ describe("typography tokens (AC-4)", () => {
     expect(new Set(sizes).size).toBe(sizes.length);
   });
 
-  it("keeps body text at 1rem (16px)", () => {
+  // TASK-004 DEC-004 tried one step smaller; the user asked to restore the TASK-002 scale.
+  it("keeps body text at 1rem (16px) and captions at 0.75rem (12px)", () => {
     expect(themeVariables["text-body"]).toBe("1rem");
+    expect(themeVariables["text-caption"]).toBe("0.75rem");
   });
 });
 
