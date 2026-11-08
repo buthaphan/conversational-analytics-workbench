@@ -59,6 +59,13 @@ describe("loadConfig (AC-6, AC-11)", () => {
     expect(() => loadConfig({ ...base, NODE_ENV: "staging" })).toThrow(/NODE_ENV/);
   });
 
+  it("uses the demo analysis model by default outside production (TASK-003 AC-15)", () => {
+    expect(loadConfig(base).analysisModel).toBe("demo");
+    expect(loadConfig({ ...base, NODE_ENV: "test" }).analysisModel).toBe("demo");
+    expect(loadConfig({ ...base, ANALYSIS_MODEL: "none" }).analysisModel).toBe("none");
+    expect(() => loadConfig({ ...base, ANALYSIS_MODEL: "gpt" })).toThrow(/ANALYSIS_MODEL/);
+  });
+
   describe("production", () => {
     const production = {
       ...base,
@@ -82,6 +89,13 @@ describe("loadConfig (AC-6, AC-11)", () => {
       expect(() =>
         loadConfig({ ...production, APP_ORIGIN: "http://showcase.example.test" }),
       ).toThrow(/APP_ORIGIN/);
+    });
+
+    it("has no analysis model by default and refuses to start with the demo model (TASK-003 AC-15)", () => {
+      expect(loadConfig(production).analysisModel).toBe("none");
+      expect(() => loadConfig({ ...production, ANALYSIS_MODEL: "demo" })).toThrow(
+        /ANALYSIS_MODEL=demo/,
+      );
     });
   });
 });

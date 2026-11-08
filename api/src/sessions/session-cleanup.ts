@@ -22,14 +22,19 @@ export type SessionCleanupStep = (
 /** The single session-end cleanup point (AC-9). Feature modules register their steps here. */
 @Injectable()
 export class SessionCleanupRegistry {
-  private readonly steps: SessionCleanupStep[] = [];
+  private readonly steps: { name: string; step: SessionCleanupStep }[] = [];
 
-  register(step: SessionCleanupStep): void {
-    this.steps.push(step);
+  /** Adds a step; steps run in registration order. The name identifies it in tests and logs. */
+  register(step: SessionCleanupStep, name = "unnamed"): void {
+    this.steps.push({ name, step });
+  }
+
+  registeredNames(): string[] {
+    return this.steps.map((s) => s.name);
   }
 
   async run(context: SessionCleanupContext, tx: Prisma.TransactionClient): Promise<void> {
-    for (const step of this.steps) {
+    for (const { step } of this.steps) {
       await step(context, tx);
     }
   }

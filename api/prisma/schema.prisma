@@ -18,6 +18,8 @@ model User {
   passwordHash String       @map("password_hash")
   createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   session      AuthSession?
+  /// Cascade so deleting a user also deletes analysis data (TASK-001 handover S1).
+  analysisSessions AnalysisSession[]
 
   @@map("users")
 }
@@ -34,10 +36,79 @@ model AuthSession {
   endedAt        DateTime? @map("ended_at") @db.Timestamptz(3)
   endReason      String?   @map("end_reason")
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysisSession AnalysisSession?
 
   @@index([endedAt])
   @@index([lastActivityAt])
   @@map("auth_sessions")
+}
+
+/// The user's analytical conversation for one login session (TASK-003). Deleted with the login session
+/// or the user. View settings and pending actions are stored here; data rows live in result_rows.
+model AnalysisSession {
+  id                String           @id @default(uuid()) @db.Uuid
+  authSessionId     String           @unique @map("auth_session_id") @db.Uuid
+  userId            String           @map("user_id") @db.Uuid
+  /// The active (complete) result set; at most one per analysis session.
+  activeResultSetId String?          @unique @map("active_result_set_id") @db.Uuid
+  /// Filters, sort, limit, and view type applied to the active result (never a copy of rows).
+  viewSettings      Json             @default("{}") @map("view_settings")
+  /// A pending switch or clarification awaiting the user (TD-8).
+  pendingAction     Json?            @map("pending_action")
+  messageCount      Int              @default(0) @map("message_count")
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  authSession       AuthSession      @relation(fields: [authSessionId], references: [id], onDelete: Cascade)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeResultSet   ResultSet?       @relation("ActiveResult", fields: [activeResultSetId], references: [id], onDelete: SetNull)
+  resultSets        ResultSet[]      @relation("SessionResults")
+  messages          AnalysisMessage[]
+
+  @@index([userId])
+  @@map("analysis_sessions")
+}
+
+/// One conversation turn part (user or assistant). `payload` holds the structured decision, outcome,
+/// and any result or analysis card shown with the message.
+model AnalysisMessage {
+  id                BigInt          @id @default(autoincrement())
+  analysisSessionId String          @map("analysis_session_id") @db.Uuid
+  seq               Int
+  role              String
+  text              String
+  payload           Json?
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  analysisSession   AnalysisSession @relation(fields: [analysisSessionId], references: [id], onDelete: Cascade)
+
+  @@unique([analysisSessionId, seq])
+  @@map("analysis_messages")
+}
+
+/// Metadata for a complete retrieved result (capability + scope). Its rows are in result_rows.
+model ResultSet {
+  id                String           @id @default(uuid()) @db.Uuid
+  analysisSessionId String           @map("analysis_session_id") @db.Uuid
+  capability        String
+  scope             Json
+  rowCount          Int              @map("row_count")
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  analysisSession   AnalysisSession  @relation("SessionResults", fields: [analysisSessionId], references: [id], onDelete: Cascade)
+  activeFor         AnalysisSession? @relation("ActiveResult")
+  rows              ResultRow[]
+
+  @@index([analysisSessionId])
+  @@map("result_sets")
+}
+
+/// One row of a complete result, as JSON keyed by the capability's field names (TD-4).
+model ResultRow {
+  resultSetId String    @map("result_set_id") @db.Uuid
+  rowIndex    Int       @map("row_index")
+  data        Json
+  resultSet   ResultSet @relation(fields: [resultSetId], references: [id], onDelete: Cascade)
+
+  @@id([resultSetId, rowIndex])
+  @@map("result_rows")
 }
 
 /// Failed sign-in attempts, kept at most 24 hours (rate limiting, DEC-006).

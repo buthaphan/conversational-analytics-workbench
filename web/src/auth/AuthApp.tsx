@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ComponentType, useCallback, useEffect, useRef, useState } from "react";
+import { Workspace } from "../analysis/Workspace";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
 import { Spinner } from "../components/ui/Spinner";
 import { Layout } from "../layout/Layout";
 import { type User, getSession, signOut } from "./api";
@@ -18,8 +18,13 @@ type State =
   | { kind: "signed-out"; notice?: SignInNotice }
   | { kind: "signed-in"; user: User };
 
+export interface AuthAppProps {
+  /** The signed-in content; tests replace it. `onSessionEnded` returns to sign-in (TASK-003 AC-13). */
+  workspace?: ComponentType<{ onSessionEnded: () => void }>;
+}
+
 /** Session-aware app: sign-in screen or signed-in shell (AC-13, AC-14). */
-export function AuthApp() {
+export function AuthApp({ workspace: SignedInWorkspace = Workspace }: AuthAppProps) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [signingOut, setSigningOut] = useState(false);
   const [signOutFailed, setSignOutFailed] = useState(false);
@@ -72,6 +77,11 @@ export function AuthApp() {
     };
   }, [signedIn, keepAlive]);
 
+  const handleSessionEnded = useCallback(
+    () => enterState({ kind: "signed-out", notice: "session-ended" }),
+    [enterState],
+  );
+
   async function handleSignOut() {
     setSigningOut(true);
     setSignOutFailed(false);
@@ -118,11 +128,7 @@ export function AuthApp() {
     >
       <div className="flex flex-col gap-4">
         {signOutFailed && <Alert variant="error">Could not sign out. Try again.</Alert>}
-        <Card title="Workspace" headingLevel={2}>
-          <p className="text-body text-fg-secondary">
-            The analytics workspace arrives in a later task.
-          </p>
-        </Card>
+        <SignedInWorkspace onSessionEnded={handleSessionEnded} />
       </div>
     </Layout>
   );

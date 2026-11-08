@@ -36,6 +36,8 @@ services:
       COOKIE_SECURE: "false"
       ALLOW_DEV_SEED: ${ALLOW_DEV_SEED:-false}
       SESSION_IDLE_TIMEOUT_SECONDS: ${SESSION_IDLE_TIMEOUT_SECONDS:-}
+      # Development demo model (TASK-003 DEC-001); refused when NODE_ENV=production.
+      ANALYSIS_MODEL: ${ANALYSIS_MODEL:-demo}
     # Not published to the host: the browser reaches the API only through the web container.
     depends_on:
       postgres:

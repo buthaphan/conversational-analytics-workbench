@@ -10,7 +10,8 @@ A portfolio showcase for exploring business data with natural-language questions
 
 - **TASK-002 (design system):** complete. The design tokens, components, and chart theme are in `web/`.
 - **TASK-001 (user accounts and sign-in):** complete. The NestJS API (`api/`), PostgreSQL, sign-in and sign-out with server-side sessions, and Docker Compose.
-- **Next:** conversational analytics, accepted for specification ([architecture proposal](docs/ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md)). TASK-003 builds the core conversational workflow without cloud credentials; TASK-004 connects BigQuery and Claude.
+- **TASK-003 (conversational workflow):** complete. The analysis workspace, the backend rules that decide what each question may do, and a development demo model, all without cloud credentials ([architecture proposal](docs/ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md)).
+- **Next:** TASK-004 connects BigQuery and Claude ([handover](docs/work/completed/TASK-003-conversational-workflow/TASK-004-HANDOVER.md)).
 
 See `docs/PROJECT-SETUP.md` for decisions and open items, and `docs/work/` for task records.
 
@@ -41,6 +42,16 @@ npm run dev                           # web on http://localhost:5173 (proxies /a
 ```
 
 The design reference page is at http://localhost:5173/design-reference (development only).
+
+## The analysis workspace
+
+After signing in, the workspace shows the conversation, the active result (a bar chart with its table, or a table), a summary of its scope, and analysis figures with the rows they are based on.
+
+- **How a question is handled:** a model reads the question and proposes one structured decision (refine, analyse, change the view, load data, confirm a switch, ask a question, or reply). The API checks that decision against the stored result and decides what actually happens. Every figure comes from the API, computed from the stored rows; the model never sees the rows or the figures.
+- **Switching data:** loading a different capability or period replaces the current result, so the workspace asks first (**Switch** or **Keep current**).
+- **Data:** until TASK-004, results come from a deterministic synthetic fixture shaped like TheLook (about 400 customers and 120 products, 2024 to 2026).
+
+**Demo mode.** TASK-003 has no AI model. With `ANALYSIS_MODEL=demo` (the default outside production), a development demo model recognises a fixed list of example questions and returns the decision a real model should return. The workspace shows a "Demo mode" banner and the examples as buttons; any other text gets the list of examples. The API refuses to start with the demo model when `NODE_ENV=production`.
 
 **Checks:** `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test` (API tests need the database running), and `npm run build`.
 

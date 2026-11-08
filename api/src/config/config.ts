@@ -1,4 +1,6 @@
 export type NodeEnv = "development" | "test" | "production";
+/** `demo`: the development demo model (DEC-001). `none`: no model yet; TASK-004 adds the Claude adapter. */
+export type AnalysisModel = "demo" | "none";
 
 export interface AppConfig {
   nodeEnv: NodeEnv;
@@ -14,6 +16,8 @@ export interface AppConfig {
   port: number;
   /** Network interface to listen on. 127.0.0.1 outside containers; the API image sets 0.0.0.0. */
   host: string;
+  /** Which model decides each analysis turn (TASK-003 AC-15). */
+  analysisModel: AnalysisModel;
 }
 
 export const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
@@ -66,10 +70,19 @@ function parseNodeEnv(env: Env): NodeEnv {
   throw new Error(`NODE_ENV must be development, test, or production (got "${value}").`);
 }
 
+function parseAnalysisModel(env: Env, nodeEnv: NodeEnv): AnalysisModel {
+  const value = env.ANALYSIS_MODEL?.trim() || (nodeEnv === "production" ? "none" : "demo");
+  if (value !== "demo" && value !== "none") {
+    throw new Error(`ANALYSIS_MODEL must be demo or none (got "${value}").`);
+  }
+  return value;
+}
+
 /** Reads and validates configuration. Throws on anything unsafe, so the API refuses to start. */
 export function loadConfig(env: Env): AppConfig {
+  const nodeEnv = parseNodeEnv(env);
   const config: AppConfig = {
-    nodeEnv: parseNodeEnv(env),
+    nodeEnv,
     databaseUrl: required(env, "DATABASE_URL"),
     appOrigin: parseOrigin(required(env, "APP_ORIGIN")),
     cookieSecure: parseBoolean(env, "COOKIE_SECURE"),
@@ -77,6 +90,7 @@ export function loadConfig(env: Env): AppConfig {
     maxSessionMs: MAX_SESSION_MS,
     port: Number(env.API_PORT || 3000),
     host: env.API_HOST?.trim() || "127.0.0.1",
+    analysisModel: parseAnalysisModel(env, nodeEnv),
   };
 
   if (config.nodeEnv === "production") {
@@ -85,6 +99,9 @@ export function loadConfig(env: Env): AppConfig {
     }
     if (!config.appOrigin.startsWith("https://")) {
       throw new Error("APP_ORIGIN must use https:// in production.");
+    }
+    if (config.analysisModel === "demo") {
+      throw new Error("ANALYSIS_MODEL=demo is for development only and is refused in production.");
     }
   }
   return config;

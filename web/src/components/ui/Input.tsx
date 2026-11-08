@@ -1,7 +1,7 @@
-import type { InputHTMLAttributes } from "react";
+import type { InputHTMLAttributes, Ref } from "react";
 import { cn } from "../../lib/cn";
 
-export type InputProps = InputHTMLAttributes<HTMLInputElement>;
+export type InputProps = InputHTMLAttributes<HTMLInputElement> & { ref?: Ref<HTMLInputElement> };
 
 /** Text input. Use inside `FormField`, which supplies the id, ARIA wiring, and invalid state. */
 export function Input({ className, ...props }: InputProps) {
