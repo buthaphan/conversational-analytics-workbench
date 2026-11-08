@@ -7,6 +7,8 @@ import { AuthApp, KEEP_ALIVE_MS } from "./AuthApp";
 
 const user = { email: "user@example.test" };
 const minute = 60 * 1000;
+/** These tests are about the session; the workspace has its own tests (analysis/Workspace.test.tsx). */
+const stubWorkspace = () => <p>Workspace content</p>;
 
 function sessionCalls(fetchMock: ReturnType<typeof mockFetch>) {
   return fetchMock.mock.calls.filter(([url]) => String(url) === "/api/auth/session").length;
@@ -30,22 +32,22 @@ describe("signed-in shell and session end (AC-14)", () => {
 
   const advance = (ms: number) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
 
-  it("shows the logo, product name, email, sign-out, and a workspace placeholder", async () => {
+  it("shows the logo, product name, email, sign-out, and the workspace", async () => {
     mockFetch({ "GET /api/auth/session": { status: 200, body: { user } } });
-    const { container } = render(<AuthApp />);
+    const { container } = render(<AuthApp workspace={stubWorkspace} />);
     expect(await screen.findByRole("button", { name: "Sign out" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 1, name: /conversational analytics workbench/i }),
     ).toBeInTheDocument();
     expect(screen.getByText("user@example.test")).toBeInTheDocument();
-    expect(screen.getByText(/analytics workspace arrives in a later task/i)).toBeInTheDocument();
+    expect(screen.getByText("Workspace content")).toBeInTheDocument();
     await expectNoAxeViolations(container);
   });
 
   it("keeps the session alive every 2 minutes", async () => {
     expect(KEEP_ALIVE_MS).toBe(2 * minute);
     const fetchMock = mockFetch({ "GET /api/auth/session": { status: 200, body: { user } } });
-    render(<AuthApp />);
+    render(<AuthApp workspace={stubWorkspace} />);
     await screen.findByRole("button", { name: "Sign out" });
     expect(sessionCalls(fetchMock)).toBe(1);
     await advance(2 * minute);
@@ -56,7 +58,7 @@ describe("signed-in shell and session end (AC-14)", () => {
 
   it("checks the session as soon as the tab becomes visible again", async () => {
     const fetchMock = mockFetch({ "GET /api/auth/session": { status: 200, body: { user } } });
-    render(<AuthApp />);
+    render(<AuthApp workspace={stubWorkspace} />);
     await screen.findByRole("button", { name: "Sign out" });
     setVisibility("hidden");
     await advance(1000);
@@ -72,7 +74,7 @@ describe("signed-in shell and session end (AC-14)", () => {
       "GET /api/auth/session": () =>
         signedIn ? { status: 200, body: { user } } : { status: 401, body: {} },
     });
-    render(<AuthApp />);
+    render(<AuthApp workspace={stubWorkspace} />);
     await screen.findByRole("button", { name: "Sign out" });
     signedIn = false;
     await advance(2 * minute);
@@ -86,7 +88,7 @@ describe("signed-in shell and session end (AC-14)", () => {
       "GET /api/auth/session": () =>
         reachable ? { status: 200, body: { user } } : "network-error",
     });
-    render(<AuthApp />);
+    render(<AuthApp workspace={stubWorkspace} />);
     await screen.findByRole("button", { name: "Sign out" });
     reachable = false;
     await advance(2 * minute);
@@ -101,7 +103,7 @@ describe("signed-in shell and session end (AC-14)", () => {
       "GET /api/auth/session": { status: 200, body: { user } },
       "POST /api/auth/sign-out": { status: 204 },
     });
-    render(<AuthApp />);
+    render(<AuthApp workspace={stubWorkspace} />);
     const u = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     await u.click(await screen.findByRole("button", { name: "Sign out" }));
     expect(await screen.findByRole("status")).toHaveTextContent("You have signed out.");
@@ -115,7 +117,7 @@ describe("signed-in shell and session end (AC-14)", () => {
       "GET /api/auth/session": { status: 200, body: { user } },
       "POST /api/auth/sign-out": "network-error",
     });
-    render(<AuthApp />);
+    render(<AuthApp workspace={stubWorkspace} />);
     const u = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     await u.click(await screen.findByRole("button", { name: "Sign out" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign out. Try again.");
@@ -149,7 +151,7 @@ describe("signed-in shell and session end (AC-14)", () => {
 
     it("does not replace 'You have signed out.' when it answers 401 after sign-out", async () => {
       const keepAlive = delayedKeepAlive();
-      render(<AuthApp />);
+      render(<AuthApp workspace={stubWorkspace} />);
       const u = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       await screen.findByRole("button", { name: "Sign out" });
       await advance(2 * minute); // keep-alive starts and waits
@@ -162,7 +164,7 @@ describe("signed-in shell and session end (AC-14)", () => {
 
     it("does not sign out a user who signed in again meanwhile", async () => {
       const keepAlive = delayedKeepAlive();
-      render(<AuthApp />);
+      render(<AuthApp workspace={stubWorkspace} />);
       const u = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       await screen.findByRole("button", { name: "Sign out" });
       await advance(2 * minute); // keep-alive starts and waits
@@ -213,7 +215,7 @@ describe("signed-in shell and session end (AC-14)", () => {
           throw new TypeError("Failed to fetch");
         },
       });
-      render(<AuthApp />);
+      render(<AuthApp workspace={stubWorkspace} />);
       const u = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       await u.click(await screen.findByRole("button", { name: "Sign out" }));
       expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign out. Try again.");
@@ -231,7 +233,7 @@ describe("signed-in shell and session end (AC-14)", () => {
             releaseSignOut = () => resolve(new Response(null, { status: 204 }));
           }),
       });
-      render(<AuthApp />);
+      render(<AuthApp workspace={stubWorkspace} />);
       const u = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       await u.click(await screen.findByRole("button", { name: "Sign out" })); // reply held
       await advance(2 * minute); // keep-alive gets 401: back to sign-in
@@ -248,12 +250,22 @@ describe("signed-in shell and session end (AC-14)", () => {
     });
   });
 
+  it("shows the analysis workspace by default, and returns to sign-in when it finds the session ended (TASK-003 AC-13)", async () => {
+    mockFetch({
+      "GET /api/auth/session": { status: 200, body: { user } },
+      "GET /api/analysis/state": { status: 401, body: {} },
+    });
+    render(<AuthApp />);
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Your session has ended. Sign in again.");
+  });
+
   it("moves from sign-in to the shell after a successful sign-in", async () => {
     mockFetch({
       "GET /api/auth/session": { status: 401, body: {} },
       "POST /api/auth/sign-in": { status: 200, body: { user } },
     });
-    render(<AuthApp />);
+    render(<AuthApp workspace={stubWorkspace} />);
     const u = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     await u.type(await screen.findByLabelText(/^Email/), "user@example.test");
     await u.type(screen.getByLabelText(/^Password/), "123456");

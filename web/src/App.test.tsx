@@ -48,9 +48,16 @@ describe("App shell (AC-14, AC-15)", () => {
   });
 
   it("shows the signed-in shell with a valid session, so a refresh keeps the user signed in", async () => {
-    mockFetch({ "GET /api/auth/session": { status: 200, body: { user } } });
+    mockFetch({
+      "GET /api/auth/session": { status: 200, body: { user } },
+      "GET /api/analysis/state": {
+        status: 200,
+        body: { messages: [], activeResult: null, pending: null, demoExamples: null },
+      },
+    });
     render(<App />);
     expect(await screen.findByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(await screen.findByRole("textbox", { name: "Ask a question" })).toBeInTheDocument();
     expect(screen.getByText("user@example.test")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Sign in" })).not.toBeInTheDocument();
   });

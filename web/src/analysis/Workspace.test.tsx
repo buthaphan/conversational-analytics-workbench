@@ -1,0 +1,306 @@
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { expectNoAxeViolations } from "../test/axe";
+import { mockFetch } from "../test/fetch";
+import type { ActiveResult, AnalysisState } from "./api";
+import { Workspace } from "./Workspace";
+
+vi.mock("echarts-for-react", () => ({
+  default: (props: { option: unknown }) => (
+    <div data-testid="echarts" data-option={JSON.stringify(props.option)} />
+  ),
+}));
+vi.mock("echarts", () => ({ registerTheme: () => {} }));
+
+const empty: AnalysisState = { messages: [], activeResult: null, pending: null };
+const examples = ["Who spent the most last year?", "Show this as a table"];
+
+const result: ActiveResult = {
+  capability: "customer_spending",
+  title: "Customer spending",
+  rowNoun: ["customer", "customers"],
+  scope: { start_date: "2025-01-01", end_date: "2026-01-01" },
+  fields: [
+    { name: "customer_id", label: "Customer ID", kind: "id" },
+    { name: "customer_name", label: "Customer", kind: "label" },
+    { name: "total_spend", label: "Total spend", kind: "money" },
+    { name: "order_count", label: "Orders", kind: "integer" },
+  ],
+  rowCount: 1412,
+  filteredCount: 87,
+  rows: [
+    { customer_id: "C0001", customer_name: "Ada Park", total_spend: 1234.5, order_count: 3 },
+    { customer_id: "C0002", customer_name: "Ben Ruiz", total_spend: 980, order_count: 2 },
+  ],
+  view: {
+    filters: [{ field: "total_spend", op: "gt", value: 500 }],
+    sort: { field: "total_spend", direction: "desc" },
+    limit: 10,
+    view: "bar",
+  },
+};
+
+const loaded: AnalysisState = {
+  messages: [
+    { seq: 1, role: "user", text: "The previous calendar year" },
+    { seq: 2, role: "assistant", text: "Showing 2 of 87 customers…" },
+  ],
+  activeResult: result,
+  pending: null,
+};
+
+const stateRoute = (state: AnalysisState, demoExamples: string[] | null = null) => ({
+  "GET /api/analysis/state": { status: 200, body: { ...state, demoExamples } },
+});
+
+describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("shows an empty state, the demo banner, and example prompts before the first question", async () => {
+    mockFetch(stateRoute(empty, examples));
+    const { container } = render(<Workspace onSessionEnded={() => {}} />);
+    expect(
+      await screen.findByText(/ask a question about customer spending or product sales/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Demo mode")).toBeInTheDocument();
+    for (const example of examples)
+      expect(screen.getByRole("button", { name: example })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Ask a question" })).toBeInTheDocument();
+    await expectNoAxeViolations(container);
+  });
+
+  it("has no demo banner with a real model", async () => {
+    mockFetch(stateRoute(empty));
+    render(<Workspace onSessionEnded={() => {}} />);
+    await screen.findByRole("textbox", { name: "Ask a question" });
+    expect(screen.queryByText("Demo mode")).not.toBeInTheDocument();
+  });
+
+  it("restores the conversation and result after a refresh, with the scope summary and a bar chart with its table", async () => {
+    mockFetch(stateRoute(loaded));
+    const { container } = render(<Workspace onSessionEnded={() => {}} />);
+    const summary = await screen.findByRole("region", { name: "Customer spending" });
+    expect(summary).toHaveTextContent("1 Jan 2025 – 31 Dec 2025");
+    expect(summary).toHaveTextContent("1,412 customers in the result");
+    expect(summary).toHaveTextContent("87 match the filters");
+    expect(summary).toHaveTextContent("Total spend over $500.00");
+    expect(screen.getByTestId("echarts")).toBeInTheDocument();
+    const table = screen.getByRole("table");
+    expect(within(table).getByRole("rowheader", { name: "Ada Park" })).toBeInTheDocument();
+    expect(within(table).getByRole("cell", { name: "$1,234.50" })).toBeInTheDocument();
+    const log = screen.getByRole("list", { name: "Conversation" });
+    expect(within(log).getByText("The previous calendar year")).toBeInTheDocument();
+    expect(within(log).getByText("Showing 2 of 87 customers…")).toBeInTheDocument();
+    await expectNoAxeViolations(container);
+  });
+
+  it("shows a table with every field when the view is a table", async () => {
+    mockFetch(
+      stateRoute({
+        ...loaded,
+        activeResult: { ...result, view: { ...result.view, view: "table" } },
+      }),
+    );
+    render(<Workspace onSessionEnded={() => {}} />);
+    const table = await screen.findByRole("table");
+    expect(screen.queryByTestId("echarts")).not.toBeInTheDocument();
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).toEqual(["Customer", "Customer ID", "Total spend", "Orders"]);
+    expect(within(table).getByRole("cell", { name: "3" })).toBeInTheDocument();
+  });
+
+  it("sends a message, announces the reply politely, and keeps focus in the input", async () => {
+    const fetchMock = mockFetch({
+      ...stateRoute(empty, examples),
+      "POST /api/analysis/messages": {
+        status: 200,
+        body: { reply: { text: "Showing 2 of 87 customers…" }, state: loaded },
+      },
+    });
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} />);
+    const input = await screen.findByRole("textbox", { name: "Ask a question" });
+    await u.type(input, "The previous calendar year");
+    await u.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByRole("region", { name: "Customer spending" })).toBeInTheDocument();
+    expect(input).toHaveValue("");
+    expect(input).toHaveFocus();
+    const live = screen.getByTestId("reply-announcer");
+    expect(live).toHaveAttribute("aria-live", "polite");
+    expect(live).toHaveTextContent("Showing 2 of 87 customers…");
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ text: "The previous calendar year" });
+  });
+
+  it("keeps the conversation in its own scrolling panel, scrolled to the newest message (walkthrough feedback)", async () => {
+    const scrollTo = vi.fn();
+    Element.prototype.scrollTo = scrollTo;
+    mockFetch({
+      ...stateRoute(loaded),
+      "POST /api/analysis/messages": {
+        status: 200,
+        body: {
+          reply: { text: "Hi" },
+          state: {
+            ...loaded,
+            messages: [...loaded.messages, { seq: 3, role: "assistant", text: "Hi" }],
+          },
+        },
+      },
+    });
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} />);
+    const history = await screen.findByRole("region", { name: "Conversation history" });
+    expect(history).toHaveAttribute("tabindex", "0");
+    expect(history.className).toMatch(/overflow-y-auto/);
+    expect(history.className).toMatch(/max-h-/);
+    scrollTo.mockClear();
+    await u.type(screen.getByRole("textbox", { name: "Ask a question" }), "hello{Enter}");
+    await waitFor(() => expect(scrollTo).toHaveBeenCalled());
+    expect(scrollTo.mock.contexts.at(-1)).toBe(history);
+  });
+
+  it("shows the Send button as busy while a reply is on its way, and sends on Enter", async () => {
+    let answer: (value: Response) => void = () => {};
+    mockFetch(stateRoute(empty));
+    const fetchMock = vi.mocked(fetch);
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input, init) =>
+      init?.method === "POST"
+        ? new Promise<Response>((resolve) => (answer = resolve))
+        : original(input, init),
+    );
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} />);
+    await u.type(await screen.findByRole("textbox", { name: "Ask a question" }), "hello{Enter}");
+    expect(screen.getByRole("button", { name: "Send" })).toHaveAttribute("aria-busy", "true");
+    answer(
+      new Response(
+        JSON.stringify({
+          reply: { text: "Hi" },
+          state: { ...empty, messages: [{ seq: 1, role: "assistant", text: "Hi" }] },
+        }),
+        { status: 200 },
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Send" })).not.toHaveAttribute("aria-busy", "true"),
+    );
+  });
+
+  it("sends an example prompt when it is clicked", async () => {
+    const fetchMock = mockFetch({
+      ...stateRoute(empty, examples),
+      "POST /api/analysis/messages": { status: 200, body: { reply: { text: "ok" }, state: empty } },
+    });
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} />);
+    await u.click(await screen.findByRole("button", { name: "Show this as a table" }));
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ text: "Show this as a table" });
+  });
+
+  it("offers Switch and Keep current for a pending switch, and sends the choice", async () => {
+    const proposal =
+      "Your current result covers customer spending for 1 Jan 2025 – 31 Dec 2025. This question needs product sales performance for 1 Jan 2025 – 31 Dec 2025. Would you like to explore anything further from your current dataset, or should I switch to the new dataset?";
+    const pendingState: AnalysisState = {
+      ...loaded,
+      messages: [
+        ...loaded.messages,
+        { seq: 3, role: "user", text: "Show product sales instead" },
+        { seq: 4, role: "assistant", text: proposal },
+      ],
+      pending: { type: "switch", capability: "product_sales_performance", scope: result.scope },
+    };
+    const fetchMock = mockFetch({
+      ...stateRoute(pendingState),
+      "POST /api/analysis/switch": {
+        status: 200,
+        body: { reply: { text: "Okay, staying with your current dataset." }, state: loaded },
+      },
+    });
+    const u = userEvent.setup();
+    const { container } = render(<Workspace onSessionEnded={() => {}} />);
+    const prompt = await screen.findByRole("group", { name: "Switch dataset?" });
+    expect(within(prompt).getByRole("button", { name: "Switch" })).toBeInTheDocument();
+    await expectNoAxeViolations(container);
+    await u.click(within(prompt).getByRole("button", { name: "Keep current" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("group", { name: "Switch dataset?" })).not.toBeInTheDocument(),
+    );
+    const post = fetchMock.mock.calls.find(([url]) => String(url) === "/api/analysis/switch");
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ choice: "keep" });
+  });
+
+  it("shows analysis figures with their base in a result card", async () => {
+    mockFetch(
+      stateRoute({
+        ...loaded,
+        messages: [
+          ...loaded.messages,
+          {
+            seq: 3,
+            role: "assistant",
+            text: "Based on all 1,412 customers, 1 Jan 2025 – 31 Dec 2025: the top 142 customers account for 38.4% of total spend ($21,000.00 of $54,700.00).",
+            card: {
+              operation: "concentration",
+              target: "complete",
+              baseCount: 1412,
+              measure: "total_spend",
+              topRows: 142,
+              topTotal: 21000,
+              total: 54700,
+              share: 0.3839,
+              rowNoun: ["customer", "customers"],
+              fields: result.fields,
+            },
+          },
+        ],
+      }),
+    );
+    render(<Workspace onSessionEnded={() => {}} />);
+    const card = await screen.findByRole("table", { name: "Concentration of total spend" });
+    expect(within(card).getByRole("cell", { name: "38.4%" })).toBeInTheDocument();
+    expect(within(card).getByRole("cell", { name: "All 1,412 customers" })).toBeInTheDocument();
+  });
+
+  it("returns to sign-in when the session has ended", async () => {
+    mockFetch({ "GET /api/analysis/state": { status: 401, body: {} } });
+    const ended = vi.fn();
+    render(<Workspace onSessionEnded={ended} />);
+    await waitFor(() => expect(ended).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps the typed text and shows an error when a message cannot be sent", async () => {
+    mockFetch({ ...stateRoute(empty), "POST /api/analysis/messages": "network-error" });
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} />);
+    const input = await screen.findByRole("textbox", { name: "Ask a question" });
+    await u.type(input, "hello");
+    await u.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Could not send your message. Try again.",
+    );
+    expect(input).toHaveValue("hello");
+  });
+
+  it("shows an error with a retry when the workspace cannot load", async () => {
+    let reachable = false;
+    mockFetch({
+      "GET /api/analysis/state": () =>
+        reachable ? { status: 200, body: { ...empty, demoExamples: null } } : "network-error",
+    });
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load your analysis.");
+    reachable = true;
+    await u.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("textbox", { name: "Ask a question" })).toBeInTheDocument();
+  });
+});

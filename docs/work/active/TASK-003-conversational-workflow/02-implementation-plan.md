@@ -1,7 +1,7 @@
 # Implementation plan: TASK-003 Conversational workflow
 
-**Spec revision:** 1 (draft, pending approval)  
-**Status:** Draft
+**Spec revision:** 1 (approved 2026-11-08)  
+**Status:** Approved for implementation (2026-11-08)
 
 | Step | Behavior / change | Acceptance criteria | Test-first step | Dependencies |
 |---|---|---|---|---|

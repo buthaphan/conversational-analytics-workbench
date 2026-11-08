@@ -17,9 +17,10 @@ export function configureApp<T extends NestExpressApplication>(app: T): T {
   // Behind the web container's nginx (or Vite's dev proxy), the client IP for rate limiting comes from
   // X-Forwarded-For, trusted only from loopback and private-network proxies.
   app.set("trust proxy", "loopback, uniquelocal");
-  // Auth responses (including errors) must never be cached by the browser or a proxy (AC-11).
+  // Auth and analysis responses (including errors) must never be cached by the browser or a proxy
+  // (TASK-001 AC-11, TASK-003 AC-12).
   app.use(
-    "/api/auth",
+    ["/api/auth", "/api/analysis"],
     (_request: unknown, response: { setHeader: SetHeader }, next: () => void) => {
       response.setHeader("Cache-Control", "no-store");
       next();

@@ -1,6 +1,6 @@
 # Specification: TASK-003 Conversational workflow (core, without credentials)
 
-**Status:** Draft  
+**Status:** Approved (2026-11-08)  
 **Revision:** 1  
 **Owner:** User  
 **Related idea:** [IDEA.md](../../../ideas/2026-11-08-conversational-analytics/IDEA.md), [ARCHITECTURE-PROPOSAL.md](../../../ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md) (revision 5), [00-context.md](00-context.md)  
@@ -246,4 +246,4 @@ None blocking. Decided: [DEC-001](DECISION-LOG.md#dec-001--browser-demonstration
 
 | Revision | Date | Change | User approval |
 |---|---|---|---|
-| 1 | 2026-11-08 | Initial draft, with DEC-001 and the proposals under Open decisions | Pending |
+| 1 | 2026-11-08 | Initial draft, with DEC-001 and the proposals under Open decisions | Approved by user, 2026-11-08 |
