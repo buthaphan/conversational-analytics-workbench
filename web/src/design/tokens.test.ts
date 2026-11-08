@@ -87,8 +87,13 @@ describe("declared pairings meet WCAG 2.2 AA (AC-3)", () => {
     ["fg", "error-subtle"],
     ["fg", "info-subtle"],
     ["accent", "surface-muted"],
+    ["on-primary", "brand-navy"], // header title and email (TASK-004 DEC-004)
   ])("declares %s on %s as text, because components use it (F2)", (fg, bg) => {
     expect(colorPairings).toContainEqual({ fg, bg, use: "text" });
+  });
+
+  it("declares the header focus ring (on-primary on brand-navy) as UI (TASK-004 DEC-004)", () => {
+    expect(colorPairings).toContainEqual({ fg: "on-primary", bg: "brand-navy", use: "ui" });
   });
 
   it("only uses the raw brand teal and gold for non-text accents", () => {

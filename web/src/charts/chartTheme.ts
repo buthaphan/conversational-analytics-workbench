@@ -8,11 +8,14 @@ function token(name: string): string {
 
 export const CHART_THEME_NAME = "cawb";
 
+/** Chart text uses the caption size (ECharts needs pixels; the token is in rem at 16px). */
+const FONT_SIZE = Math.round(parseFloat(themeVariables["text-caption"] ?? "0.6875") * 16);
+
 function axis() {
   return {
     axisLine: { show: true, lineStyle: { color: token("border-input") } },
     axisTick: { show: false },
-    axisLabel: { color: token("fg-muted") },
+    axisLabel: { color: token("fg-muted"), fontSize: FONT_SIZE },
     splitLine: { show: true, lineStyle: { color: token("border") } },
   };
 }
@@ -24,12 +27,13 @@ export const chartTheme = {
   textStyle: {
     fontFamily: themeVariables["font-sans"] ?? "sans-serif",
     color: token("fg-secondary"),
+    fontSize: FONT_SIZE,
   },
-  legend: { textStyle: { color: token("fg-secondary") } },
+  legend: { textStyle: { color: token("fg-secondary"), fontSize: FONT_SIZE } },
   tooltip: {
     backgroundColor: token("surface"),
     borderColor: token("border"),
-    textStyle: { color: token("fg") },
+    textStyle: { color: token("fg"), fontSize: FONT_SIZE },
   },
   categoryAxis: axis(),
   valueAxis: axis(),

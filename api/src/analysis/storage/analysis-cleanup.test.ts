@@ -3,6 +3,7 @@ import { SessionCleanupRegistry } from "../../sessions/session-cleanup";
 import { SessionSweeper } from "../../sessions/session.sweeper";
 import { SessionStore } from "../../sessions/session.store";
 import { type TestApp, createTestApp, createUser, resetDatabase } from "../../test/app";
+import { CAPABILITIES } from "../capabilities/registry";
 import { ANALYSIS_CLEANUP_STEP_NAME } from "./analysis-cleanup";
 
 const minute = 60 * 1000;
@@ -127,4 +128,15 @@ describe("analysis data is deleted when the login session ends (AC-1)", () => {
     expect(Date.now() - started).toBeLessThan(2500);
     expect(await analysisLeft()).toBe(0);
   }, 60_000);
+
+  it("cleans up a result at the row cap inside the 5-second transaction (TASK-004 AC-8)", async () => {
+    const cap = Math.max(...Object.values(CAPABILITIES).map((c) => c.rowCap));
+    const { sessionId } = await signedInWithAnalysis(cap);
+    const started = Date.now();
+    await store.end(sessionId, "sign_out");
+    const elapsed = Date.now() - started;
+    console.log(`Cleaned up ${cap} rows in ${elapsed} ms.`);
+    expect(elapsed).toBeLessThan(5000);
+    expect(await analysisLeft()).toBe(0);
+  }, 120_000);
 });

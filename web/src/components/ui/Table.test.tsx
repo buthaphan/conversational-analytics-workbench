@@ -59,6 +59,53 @@ describe("Table (AC-7)", () => {
     expect(within(region).getByRole("table")).toBeInTheDocument();
   });
 
+  it("with a max height, scrolls vertically inside the same bordered region and keeps the column headers in view (TASK-004 DEC-004)", () => {
+    render(
+      <Table
+        caption="Top customers"
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.id}
+        maxHeight="sm"
+      />,
+    );
+    const region = screen.getByRole("region", { name: "Top customers" });
+    // The frame (border) is the scroll container itself, so it never scrolls away.
+    expect(region.className).toMatch(/(^|\s)overflow-y-auto(\s|$)/);
+    expect(region.className).toMatch(/(^|\s)border(\s|$)/);
+    expect(screen.getAllByRole("region")).toHaveLength(1);
+    for (const header of within(region).getAllByRole("columnheader"))
+      expect(header.className).toMatch(/(^|\s)sticky(\s|$)/);
+  });
+
+  it("dense uses tighter rows and a smaller caption (TASK-004 DEC-004)", () => {
+    render(
+      <Table caption="Top customers" columns={columns} rows={rows} rowKey={(r) => r.id} dense />,
+    );
+    const cell = screen.getByRole("cell", { name: "$1234.50" });
+    expect(cell.className).toMatch(/(^|\s)py-1(\s|$)/);
+    expect(screen.getByRole("columnheader", { name: "Customer" }).className).toMatch(
+      /(^|\s)py-1(\s|$)/,
+    );
+    expect(screen.getByText("Top customers").className).toMatch(/(^|\s)text-caption(\s|$)/);
+  });
+
+  it("hideCaption hides the caption visually but keeps the table and region named (TASK-004 DEC-004)", async () => {
+    const { container } = render(
+      <Table
+        caption="Top customers"
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.id}
+        hideCaption
+      />,
+    );
+    expect(screen.getByText("Top customers").className).toMatch(/(^|\s)sr-only(\s|$)/);
+    expect(screen.getByRole("table", { name: "Top customers" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Top customers" })).toBeInTheDocument();
+    await expectNoAxeViolations(container);
+  });
+
   it("shows an empty-state row when there is no data", () => {
     renderTable([]);
     expect(screen.getByRole("cell", { name: "No data to show." })).toHaveAttribute("colspan", "3");

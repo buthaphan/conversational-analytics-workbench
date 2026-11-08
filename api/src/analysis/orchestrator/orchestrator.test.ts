@@ -1,13 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { ANSWERS, switchQuestion } from "../answers/answers";
-import type { CapabilityId, Scope } from "../capabilities/registry";
+import { CAPABILITIES, type CapabilityId, type Scope } from "../capabilities/registry";
 import { ModelContextBuilder } from "../context/model-context";
 import { DataSource, type ResultRowData } from "../data/data-source";
 import { ResultEngine } from "../engine/result-engine";
 import { createTestPrisma, resetDatabase } from "../../test/database";
 import { FakeClock } from "../../test/fake-clock";
 import { ScriptedLlmClient } from "../../test/scripted-llm-client";
-import { AnalysisOrchestrator } from "./orchestrator";
+import { AnalysisOrchestrator, TurnInProgressError } from "./orchestrator";
 
 const prisma = createTestPrisma();
 const hour = 60 * 60 * 1000;
@@ -457,6 +457,50 @@ describe("analysis orchestrator (AC-3, AC-4, AC-6, AC-7, AC-11)", () => {
   });
 
   describe("limits (AC-11, AC-12)", () => {
+    const capRows = (n: number): ResultRowData[] =>
+      Array.from({ length: n }, (_, i) => ({
+        customer_id: `c${i}`,
+        customer_name: `Customer ${i}`,
+        total_spend: (i % 997) + 0.5,
+        order_count: (i % 7) + 1,
+        avg_order_value: 1,
+      }));
+    const withOptions = (options: { rowCap?: number }) =>
+      new AnalysisOrchestrator(
+        prisma,
+        new ResultEngine(prisma),
+        new ModelContextBuilder(prisma, new ResultEngine(prisma)),
+        llm,
+        data,
+        new FakeClock(),
+        options,
+      );
+
+    it("cannot raise the registry cap through the option (TASK-004 AC-8, review N2)", async () => {
+      const cap = CAPABILITIES.customer_spending.rowCap;
+      data.fetch = async () => capRows(cap + 1);
+      llm.push(load("customer_spending", y2025));
+      const { reply } = await withOptions({ rowCap: cap * 10 }).handleMessage(
+        authSessionId,
+        userId,
+        "Load",
+      );
+      expect(reply.text).toBe(ANSWERS.rowCap("customer_spending", cap + 1, cap));
+      expect(await prisma.resultRow.count()).toBe(0);
+    }, 60_000);
+
+    it("stores a result at the cap within the turn deadline (TASK-004 AC-8)", async () => {
+      const cap = CAPABILITIES.customer_spending.rowCap;
+      data.fetch = async () => capRows(cap);
+      llm.push(load("customer_spending", y2025));
+      const started = Date.now();
+      const { state } = await orchestrator.handleMessage(authSessionId, userId, "Load");
+      const elapsed = Date.now() - started;
+      console.log(`Stored ${cap} rows in ${elapsed} ms.`);
+      expect(state.activeResult?.rowCount).toBe(cap);
+      expect(elapsed).toBeLessThan(30_000);
+    }, 120_000);
+
     it("refuses a result over the row cap, storing nothing", async () => {
       const capped = new AnalysisOrchestrator(
         prisma,
@@ -514,22 +558,30 @@ describe("analysis orchestrator (AC-3, AC-4, AC-6, AC-7, AC-11)", () => {
       await say("Load", load("customer_spending", y2025));
       await say("Products", load("product_sales_performance", y2025));
       llm.push(refine({ limit: 5 }));
-      await Promise.all([
+      const results = await Promise.allSettled([
         orchestrator.handleSwitch(authSessionId, userId, "switch"),
         orchestrator.handleMessage(authSessionId, userId, "five rows"),
       ]);
-      const session = await prisma.analysisSession.findFirstOrThrow();
       const sets = await prisma.resultSet.findMany();
       expect(sets).toHaveLength(1);
+      const session = await prisma.analysisSession.findFirstOrThrow();
       expect(session.activeResultSetId).toBe(sets[0]?.id);
-      expect(session.pendingAction).toBeNull();
+      expect(session.turnId).toBeNull();
       const seqs = (await prisma.analysisMessage.findMany({ orderBy: { seq: "asc" } })).map(
         (m) => m.seq,
       );
+      const state = await orchestrator.getState(authSessionId, userId);
+      // Since TASK-004 DEC-001 one of them may be refused while the other runs; nothing changes then.
+      const refused = results.filter((r) => r.status === "rejected");
+      for (const r of refused) expect(r.reason).toBeInstanceOf(TurnInProgressError);
+      if (refused.length === 1) {
+        expect(seqs).toEqual([1, 2, 3, 4, 5, 6]);
+        return;
+      }
+      expect(session.pendingAction).toBeNull();
       expect(seqs).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
       // Either order is valid: switch first (products, then limit 5), or the message first
       // (it clears the pending switch, so the button finds nothing to confirm).
-      const state = await orchestrator.getState(authSessionId, userId);
       if (state.activeResult?.capability === "product_sales_performance") {
         expect(data.calls).toHaveLength(2);
         expect(state.activeResult.view.limit).toBe(5);
@@ -540,17 +592,21 @@ describe("analysis orchestrator (AC-3, AC-4, AC-6, AC-7, AC-11)", () => {
       }
     });
 
-    it("processes simultaneous messages one at a time (TD-7)", async () => {
+    it("runs one turn at a time and refuses the others (TD-7, TASK-004 DEC-001)", async () => {
       llm.push(load("customer_spending", y2025), refine({ limit: 5 }), refine({ limit: 7 }));
-      await Promise.all([
+      const results = await Promise.allSettled([
         orchestrator.handleMessage(authSessionId, userId, "one"),
         orchestrator.handleMessage(authSessionId, userId, "two"),
         orchestrator.handleMessage(authSessionId, userId, "three"),
       ]);
+      const accepted = results.filter((r) => r.status === "fulfilled").length;
+      expect(accepted).toBeGreaterThanOrEqual(1);
+      for (const r of results)
+        if (r.status === "rejected") expect(r.reason).toBeInstanceOf(TurnInProgressError);
       const seqs = (await prisma.analysisMessage.findMany({ orderBy: { seq: "asc" } })).map(
         (m) => m.seq,
       );
-      expect(seqs).toEqual([1, 2, 3, 4, 5, 6]);
+      expect(seqs).toEqual(Array.from({ length: 2 * accepted }, (_, i) => i + 1));
       expect(data.calls).toHaveLength(1);
     });
   });

@@ -16,6 +16,14 @@ describe("ECharts theme (AC-8)", () => {
     expect(chartTheme.textStyle.fontFamily).toMatch(/^"Inter Variable"/);
   });
 
+  it("sizes all chart text at the caption token, 12px (TASK-004 DEC-004)", () => {
+    expect(chartTheme.textStyle.fontSize).toBe(12);
+    expect(chartTheme.legend.textStyle.fontSize).toBe(12);
+    expect(chartTheme.tooltip.textStyle.fontSize).toBe(12);
+    expect(chartTheme.categoryAxis.axisLabel.fontSize).toBe(12);
+    expect(chartTheme.valueAxis.axisLabel.fontSize).toBe(12);
+  });
+
   it("takes every color from the tokens", () => {
     const tokenValues = new Set(Object.values(colors));
     const used = [

@@ -38,4 +38,16 @@ describe("Card (AC-7)", () => {
     );
     await expectNoAxeViolations(container);
   });
+
+  it("compact keeps the heading level and region name, with the smaller heading size (TASK-004 DEC-004)", () => {
+    render(
+      <Card title="Customer spending" headingLevel={2} compact>
+        Body
+      </Card>,
+    );
+    const heading = screen.getByRole("heading", { level: 2, name: "Customer spending" });
+    expect(heading).toHaveClass("text-h3");
+    expect(heading).not.toHaveClass("text-h2");
+    expect(screen.getByRole("region", { name: "Customer spending" })).toBeInTheDocument();
+  });
 });

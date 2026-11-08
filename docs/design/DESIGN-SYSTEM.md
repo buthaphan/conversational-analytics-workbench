@@ -115,4 +115,8 @@ Everything above is decided. These items are deliberately left for later tasks:
 
 The transparent SVGs in `assets/brand/` are the logo assets (copied into `web/` for the app). The PNG below is a reference crop only.
 
+- `logo.svg`: for light backgrounds.
+- `logo-on-dark.svg`: for the brand-navy header (TASK-004 DEC-004). The same artwork with a white ring, tail, and wordmark and a light tagline; the teal and gold bars are unchanged.
+- **Header:** `bg-brand-navy`, showing only the logo, which is the page's `h1` and named by its alt text, plus `text-on-primary` text (tested pairing). Controls on it use a white focus ring (`focus-visible:outline-on-primary`), because the default teal ring is too faint on navy.
+
 ![Selected circular mark reference](../../assets/brand/reference/selected-mark-reference-crop.png)

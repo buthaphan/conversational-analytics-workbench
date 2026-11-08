@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import logoUrl from "../logo.svg";
+import logoUrl from "../logo-on-dark.svg";
 
 export interface LayoutProps {
   /** Shown at the end of the header, for example the signed-in user and Sign out. */
@@ -7,14 +7,22 @@ export interface LayoutProps {
   children: ReactNode;
 }
 
-/** Page frame: header with logo and product name, then the main content. */
+/**
+ * Page frame: a brand navy header with the logo and the actions, then the main content. The logo
+ * already shows the product name, so it is the page heading itself (TASK-004 DEC-004).
+ */
 export function Layout({ actions, children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-canvas text-fg">
-      <header className="border-b border-border bg-surface">
+      <header className="bg-brand-navy text-on-primary">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <img src={logoUrl} alt="" className="h-8 w-auto" />
-          <h1 className="text-h3 text-fg">Conversational Analytics Workbench</h1>
+          <h1>
+            <img
+              src={logoUrl}
+              alt="Conversational Analytics Workbench"
+              className="h-12 w-auto sm:h-16"
+            />
+          </h1>
           {actions && <div className="ml-auto flex items-center gap-3">{actions}</div>}
         </div>
       </header>

@@ -119,8 +119,15 @@ export function AuthApp({ workspace: SignedInWorkspace = Workspace }: AuthAppPro
     <Layout
       actions={
         <>
-          <span className="text-body-sm text-fg-secondary">{state.user.email}</span>
-          <Button variant="secondary" size="sm" loading={signingOut} onClick={handleSignOut}>
+          <span className="text-body-sm text-on-primary">{state.user.email}</span>
+          {/* On the navy header the default teal focus ring is too faint (TASK-004 DEC-004). */}
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={signingOut}
+            onClick={handleSignOut}
+            className="focus-visible:outline-on-primary"
+          >
             Sign out
           </Button>
         </>

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { CapabilityId, Scope } from "../capabilities/registry";
 import { DataSource, type ResultRowData } from "./data-source";
+import { fromCents, toCents } from "./money";
 
 /**
  * Deterministic stand-in for TheLook (TASK-003 TD-12). Its aggregation is the reference semantics
@@ -165,9 +166,6 @@ export function generateFixture(seed = 20261108): Fixture {
   }
   return { customers, products, items };
 }
-
-const toCents = (amount: number) => Math.round(amount * 100);
-const fromCents = (cents: number) => Math.round(cents) / 100;
 
 @Injectable()
 export class FixtureDataSource extends DataSource {

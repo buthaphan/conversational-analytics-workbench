@@ -149,6 +149,7 @@ export const ANSWERS = {
     `This scope returns ${formatCount(rows)} ${nouns(capabilityId, rows)}, more than the limit of ${formatCount(cap)}. Please choose a narrower date range.`,
   messageLimit:
     "This conversation has reached its message limit. Sign out and in again to start a fresh analysis.",
+  turnInProgress: "I'm still answering your last message. Please wait a moment.",
   retrievalFailed:
     "Sorry, the data could not be loaded. Your current result is unchanged. Please try again.",
   demoUnknown: (examples: string[]) =>

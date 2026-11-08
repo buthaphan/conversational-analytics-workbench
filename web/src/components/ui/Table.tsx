@@ -18,6 +18,15 @@ export interface TableProps<Row> {
   rowKey: (row: Row) => string;
   emptyMessage?: string;
   className?: string;
+  /**
+   * Limits the height: the bordered region itself scrolls vertically, so its frame stays in place,
+   * and the column headers stay in view (TASK-004 DEC-004).
+   */
+  maxHeight?: "sm" | "md";
+  /** Tighter rows and a smaller caption, to show more rows (TASK-004 DEC-004). */
+  dense?: boolean;
+  /** Keeps the caption for assistive technology only, when a visible title already names it. */
+  hideCaption?: boolean;
 }
 
 export function Table<Row>({
@@ -27,7 +36,11 @@ export function Table<Row>({
   rowKey,
   emptyMessage = "No data to show.",
   className,
+  maxHeight,
+  dense = false,
+  hideCaption = false,
 }: TableProps<Row>) {
+  const pad = dense ? "px-3 py-1" : "px-4 py-2";
   const captionId = useId();
   const align = (column: TableColumn<Row>) =>
     column.numeric ? "text-right tabular-nums" : "text-left";
@@ -40,11 +53,21 @@ export function Table<Row>({
       className={cn(
         "overflow-x-auto rounded-lg border border-border bg-surface",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+        maxHeight && "overflow-y-auto",
+        maxHeight === "sm" && "max-h-64",
+        maxHeight === "md" && "max-h-[28rem]",
         className,
       )}
     >
       <table className="w-full border-collapse text-body-sm text-fg">
-        <caption id={captionId} className="px-4 py-3 text-left text-label text-fg">
+        <caption
+          id={captionId}
+          className={cn(
+            "text-left text-fg",
+            dense ? "px-3 py-1.5 text-caption" : "px-4 py-3 text-label",
+            hideCaption && "sr-only",
+          )}
+        >
           {caption}
         </caption>
         <thead className="bg-surface-muted">
@@ -54,7 +77,12 @@ export function Table<Row>({
                 key={column.key}
                 scope="col"
                 className={cn(
-                  "border-b border-border px-4 py-2 font-semibold whitespace-nowrap text-fg-secondary",
+                  "border-b border-border font-semibold whitespace-nowrap text-fg-secondary",
+                  pad,
+                  // Sticky headers need their own background; the inset shadow keeps the divider
+                  // visible, since a collapsed border does not stick with the cell.
+                  maxHeight &&
+                    "sticky top-0 z-10 bg-surface-muted shadow-[inset_0_-1px_0_var(--color-border)]",
                   align(column),
                 )}
               >
@@ -76,7 +104,7 @@ export function Table<Row>({
                 {columns.map((column) => {
                   const value = row[column.key];
                   const content = column.format ? column.format(value, row) : String(value ?? "");
-                  const cellClass = cn("px-4 py-2 whitespace-nowrap", align(column));
+                  const cellClass = cn(pad, "whitespace-nowrap", align(column));
                   return column.rowHeader ? (
                     <th key={column.key} scope="row" className={cn(cellClass, "font-medium")}>
                       {content}

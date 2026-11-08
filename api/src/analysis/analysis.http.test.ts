@@ -62,6 +62,7 @@ describe("analysis HTTP API (TASK-003 AC-12, AC-13, AC-15)", () => {
       activeResult: null,
       pending: null,
       notice: null,
+      turnInProgress: false,
       demoExamples: DEMO_EXAMPLES,
     });
   });
@@ -143,23 +144,8 @@ describe("analysis HTTP API (TASK-003 AC-12, AC-13, AC-15)", () => {
       expect(other.body).toMatchObject({ messages: [], activeResult: null });
     });
 
-    it("serializes concurrent messages from one session", async () => {
-      const token = await signIn("user@example.test");
-      await send(token, { text: "The previous calendar year" });
-      const responses = await Promise.all([
-        send(token, { text: "Show the lowest spenders" }),
-        send(token, { text: "Show this as a table" }),
-        send(token, { text: "Only customers who spent over $500" }),
-      ]);
-      expect(responses.map((r) => r.status)).toEqual([200, 200, 200]);
-      const state = (await getState(token)).body;
-      expect(state.messages.map((m: { seq: number }) => m.seq)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-      expect(state.activeResult.view).toMatchObject({
-        view: "table",
-        sort: { direction: "asc" },
-        filters: [{ field: "total_spend" }],
-      });
-    });
+    // Concurrent messages: since TASK-004 DEC-001 a message during a running turn is refused with
+    // 409 instead of queued. See turn-lock.http.test.ts.
 
     it("stops at 200 messages per analysis session", async () => {
       const token = await signIn("user@example.test");

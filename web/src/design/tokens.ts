@@ -105,6 +105,9 @@ export const colorPairings: ColorPairing[] = [
     "text",
   ),
   ...each(["on-primary"], ["primary", "primary-hover"], "text"),
+  // The navy header: title and email as text, the focus ring as UI (TASK-004 DEC-004).
+  ...each(["on-primary"], ["brand-navy"], "text"),
+  ...each(["on-primary"], ["brand-navy"], "ui"),
   ...each(["on-destructive"], ["destructive", "destructive-hover"], "text"),
   ...STATUSES.flatMap((s) => each([s], [`${s}-subtle`, "surface", "canvas"], "text")),
   ...each(["border-input", "focus", "destructive"], SURFACES, "ui"),

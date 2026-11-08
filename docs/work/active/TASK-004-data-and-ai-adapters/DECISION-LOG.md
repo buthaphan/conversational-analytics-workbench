@@ -32,6 +32,36 @@ Record only material decisions or change requests. Keep pending questions visibl
 - **User decision:** Option 1. Exact versions are chosen at install time and shown to the user in the install permission prompt; the dependency audit is recorded.
 - **Decision rationale/date:** Maintained auth, timeouts, retries, and structured output support. 2026-11-08.
 
+## DEC-004 — Walkthrough layout feedback
+
+- **Raised:** 2026-11-08 (AC-12 walkthrough, user screenshot)
+- **Status:** Approved (requested by the user)
+- **Discovery:** with real data the workspace does not fit the screen: the logo is too small to read, the scope summary card is tall, and the chart (320 px) plus a 10-row table push the page well below the fold.
+- **Change:**
+  - The logo is shown larger.
+  - The scope summary is laid out in two columns on wide screens.
+  - The workspace chart is shorter.
+  - The result table scrolls inside a fixed-height, keyboard-focusable region, so the scope, chart, table, and conversation fit one screen at about 1080 px height.
+  - The design-system defaults (`ChartWithTable` without `compact`) are unchanged.
+- **Follow-up requests (same walkthrough):**
+  - A compact scope summary: smaller heading size (the heading level is unchanged), bold term labels, small text. Done through a new `Card` `compact` option.
+  - **Reverted:** the whole type scale was made one step smaller, but the user had been viewing at browser zoom; on request the TASK-002 scale is restored (body 16 px). Net change to the design tokens: none.
+  - Scrolling frames stay in place: the table's own bordered region scrolls (new `Table` `maxHeight` option, with sticky column headers), replacing the earlier wrapper, whose scrolling moved the table border out of view. The conversation panel scrolls inside its own bordered frame.
+  - On wide screens the result table's maximum height follows the window (`max(10rem, 100vh - 37rem)` with the chart, `100vh - 21rem` table-only), like the conversation panel, so the page itself does not scroll.
+  - Denser result tables (new `Table` `dense` option: 4 px row padding, caption size). In the chart view, the table caption, which repeats the chart title just above, is visible to screen readers only (`hideCaption`).
+  - With a result shown on wide screens, the conversation column's height matches the result column (the section is positioned out of the grid's height calculation; the history takes the remaining space and scrolls).
+  - **Header colour** (user's choice of three options, 2026-11-08): brand navy, with a new light logo variant (`assets/brand/logo-on-dark.svg`, copied to `web/src/`), white email text, and a white focus ring on the Sign out button. The contrast pairings `on-primary` on `brand-navy` (text and UI) are declared and tested. `colorLiterals.test.ts` exempts the new logo file, like the existing one.
+  - Chart text (axis labels, legend, tooltip) takes its size from the caption token (12 px with the restored scale).
+  - **Logo only in the header:** the separate title text, which repeated the logo, is removed. The logo is the page `h1`, named by its alt text.
+  - **Fill the window:** on wide screens the grid is at least `100vh - 9.5rem` tall (not in demo mode); the result card stretches and the chart grows (minimum 14rem), so the result and the conversation reach the bottom of the window.
+- **Impact:** presentation only; no API or behavior change. Web tests added for the scroll region. The user confirms in the browser.
+
+## Resolved items
+
+- **Anthropic billing** (resolved 2026-11-08): the user uses a Console account with $20 of prepaid API credit, and auto-reload is advised off. The idea record's Claude Max credit assumption does not apply.
+- **Server-side refusal fallback** (user, 2026-11-08): keep it on (`fallbacks: "default"`).
+- **Evaluation budget** (user, 2026-11-08): up to 5 runs. Used: 3 full runs (the first rejected with HTTP 400, unbilled) and 2 single-case probes, about $0.20 in total.
+
 ## Pending
 
-- **Anthropic billing:** not yet checked by the user (Claude Max credits are normally separate from Console API billing). Blocks the first live Claude call (plan step 9), not the specification or the credential-free steps.
+- None.

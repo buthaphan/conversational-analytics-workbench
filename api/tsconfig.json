@@ -18,5 +18,12 @@
     "outDir": "dist",
     "types": ["node"]
   },
-  "include": ["src", "prisma", "scripts", "vitest.config.mts", "prisma.config.ts"]
+  "include": [
+    "src",
+    "prisma",
+    "scripts",
+    "vitest.config.mts",
+    "vitest.live.config.mts",
+    "prisma.config.ts"
+  ]
 }
