@@ -89,3 +89,54 @@ No finding is blocking. The core safety properties hold:
 - **Still to check in a browser:** the conversation-panel fix and a narrow-screen (320 px) view.
 
 After the fixes, run a second review round, then closeout.
+
+---
+
+# Round 2
+
+**Reviewed diff:** `f99200b..80434b5` (review round 1 fixes). CI passed for `80434b5` (reported by the user).
+**Method:** as in round 1: my own read of the diff, plus the same independent reviewer tracing each fix and looking for regressions. Focused runs at `80434b5`: `Workspace.test.tsx` 17/17; orchestrator and registry tests 65/65.
+
+## Round 1 findings: status
+
+| ID | Status | Evidence |
+|---|---|---|
+| R1, R7 | **Deferred by user decision** ([DEC-002](DECISION-LOG.md)) | Recorded as required work in `TASK-004-HANDOVER.md` section 4, with the tests to add. Latent with the demo model. |
+| R2 | Fixed | `state().notice` uses the same condition as the limit check. The workspace shows it as a warning, and keeps the typed text when no message was stored. Web tests cover the limit turn and a refresh, and fail without the fix. |
+| R3 | Fixed | `top_count` must be from 1 to `capability.rowCap`. The registry tests for `1e20` and `100001` fail without the fix. No orchestrator-level test (minor). |
+| R4 | Fixed | The no-pending branch leaves `pending` unchanged, so `turn()` skips the update. That branch runs only when no switch is pending, so the TD-8 "any new message clears a pending switch" rule is unaffected. Three tests (Switch, Keep current, confirming reply) fail with the old `pending: null`. |
+| R5 | Fixed (main defect) | The input is cleared only if its current value equals the sent text; the test fails with the old closure comparison. The secondary point (Enter while a reply is pending is silently ignored) was not addressed: see N1. |
+| R6 | Fixed | The announcement is a keyed `<p>`, a new node per reply. The test fails with a plain string or an unkeyed node. |
+| R10 | Fixed | New tests: an over-cap switch keeps the old result; a switch confirmed while a message arrives keeps the state consistent in either order (one result set, matching pointer, nothing pending, contiguous messages); axe checks on the card, send-error, and load-error states. |
+| R11 | Fixed | The example buttons are outside the banner's `role="status"` region; tested. |
+| R8, R9, R12 | Open (optional, as agreed) | Unchanged. |
+
+The `stored` check in `Workspace.run` was reviewed: a refused limit message is the only successful reply that stores nothing, the state always contains every message, and a busy request blocks a second send. No misclassification found.
+
+## New findings
+
+No finding is blocking.
+
+| ID | Severity | Finding | Location | Suggested action |
+|---|---|---|---|---|
+| N1 | Low (accessibility) | **Screen readers get no feedback in two cases.** (a) A message refused at the limit is not announced, because only stored replies are announced and the warning alert is already on screen. A screen-reader user who presses Enter again hears nothing, and the text stays in the input. (b) Pressing Enter while a reply is pending is silently ignored (R5's secondary point). Also, the warning alert appears in the same render as the 200th reply, so the assertive alert may interrupt the polite reply announcement. | `web/src/analysis/Workspace.tsx` `run()`, notice alert | Announce `reply.text` even when nothing was stored. Give feedback (or block submit visibly) while busy. |
+| N2 | Low (latent) | **The `top_count` bound ignores the orchestrator's `rowCap` option.** The bound uses `capability.rowCap`, while storage uses `options.rowCap ?? capability.rowCap`. If TASK-004 raised the cap through the option, a valid large top count would be refused, with the wrong number in the message. Today the option is only used to lower the cap in a test, where the looser bound is harmless. | `capabilities/registry.ts` `validateAnalysis`; `orchestrator.ts` `load()` | Pass the effective cap to validation, or note in the handover that caps change in the registry only. |
+| N3 | Info | **Outdated comment.** The `Outcome.pending` comment still says undefined is for "failures only"; the no-pending confirmation now uses it too. | `orchestrator.ts` `Outcome` interface | Update the comment. |
+
+## Acceptance criteria (changes since round 1)
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| AC-2 | Met | R3 fixed; unbounded `top_count` now rejected with a reason. |
+| AC-7 | Met | R4 fixed; a confirmation with nothing pending changes nothing (tested for all three paths). |
+| AC-11 | Met | Over-cap switch keeps the old result (R10a test). |
+| AC-12 | Met | The message limit is visible in the web app (R2). N1(a) is an accessibility refinement of the same state. |
+| AC-16 | Met | R5, R6, and R11 fixed; axe now runs on six states. Still unverified in a browser: 320 px reflow and the scrolling conversation panel (user check outstanding). N1 is a minor accessibility gap. |
+
+All other criteria are unchanged from round 1 and remain met. AC-1's R1 timing issue is deferred by DEC-002 and cannot occur with the demo model.
+
+## Recommendation
+
+**Ready for closeout, pending two user actions:**
+1. **Decide on N1–N3.** Fix now (each is a few lines; N1 needs a web test), or accept them as low-severity follow-ups recorded in closeout. My suggestion: fix N1 and N3 now, and handle N2 with one line in the TASK-004 handover.
+2. **Browser checks:** the scrolling conversation panel and a 320 px window.

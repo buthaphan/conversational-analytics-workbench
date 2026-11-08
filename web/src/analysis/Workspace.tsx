@@ -44,6 +44,7 @@ export function Workspace({ onSessionEnded }: WorkspaceProps) {
   const [sendFailed, setSendFailed] = useState(false);
   // Keyed by a counter so a repeated reply is a new node, which screen readers announce (review R6).
   const [announcement, setAnnouncement] = useState({ id: 0, text: "" });
+  const announce = (text: string) => setAnnouncement((previous) => ({ id: previous.id + 1, text }));
   const inputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
   const messageCount = state.messages.length;
@@ -77,7 +78,11 @@ export function Workspace({ onSessionEnded }: WorkspaceProps) {
     request: () => Promise<ApiResult<{ reply: { text: string }; state: AnalysisState }>>,
     sent?: string,
   ) {
-    if (busy) return;
+    if (busy) {
+      // The Send button shows the wait visually; screen readers hear it too (review N1).
+      announce("Please wait for the current reply.");
+      return;
+    }
     setBusy(true);
     setSendFailed(false);
     const result = await request();
@@ -89,8 +94,9 @@ export function Workspace({ onSessionEnded }: WorkspaceProps) {
     }
     const stored = result.data.state.messages.length > state.messages.length;
     setState(result.data.state);
+    // Announce every reply, including a refusal that stored no message (the limit, review N1).
+    announce(result.data.reply.text);
     if (stored) {
-      setAnnouncement((previous) => ({ id: previous.id + 1, text: result.data.reply.text }));
       // Compare with the current input, not the value when sending, so text typed while waiting
       // is kept (review R5). A message that was not stored (the limit) keeps its text too (R2).
       if (sent !== undefined) setText((current) => (current.trim() === sent ? "" : current));
@@ -249,6 +255,12 @@ export function Workspace({ onSessionEnded }: WorkspaceProps) {
                   maxLength={MAX_LENGTH}
                   autoComplete="off"
                   onChange={(event) => setText(event.target.value)}
+                  // While busy, the Send button cancels its own activation, so Enter would not
+                  // submit; say why instead of dropping the message silently (review N1).
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && busy)
+                      announce("Please wait for the current reply.");
+                  }}
                 />
               )}
             </FormField>

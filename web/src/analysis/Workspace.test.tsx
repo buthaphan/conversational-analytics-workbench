@@ -296,6 +296,43 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
     expect(input).toHaveValue("one more");
   });
 
+  it("announces a refusal at the limit even though no message was stored (review N1)", async () => {
+    const limit = "Limit reached.";
+    mockFetch({
+      ...stateRoute({ ...loaded, notice: limit }),
+      "POST /api/analysis/messages": {
+        status: 200,
+        body: { reply: { text: limit }, state: { ...loaded, notice: limit } },
+      },
+    });
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} />);
+    const input = await screen.findByRole("textbox", { name: "Ask a question" });
+    await u.type(input, "again{Enter}");
+    await waitFor(() => expect(screen.getByTestId("reply-announcer")).toHaveTextContent(limit));
+    expect(input).toHaveValue("again");
+  });
+
+  it("says so when a message is sent while a reply is still on its way (review N1)", async () => {
+    mockFetch(stateRoute(empty));
+    const fetchMock = vi.mocked(fetch);
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input, init) =>
+      init?.method === "POST" ? new Promise<Response>(() => {}) : original(input, init),
+    );
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} />);
+    const input = await screen.findByRole("textbox", { name: "Ask a question" });
+    await u.type(input, "first{Enter}");
+    await u.clear(input);
+    await u.type(input, "second{Enter}");
+    expect(screen.getByTestId("reply-announcer")).toHaveTextContent(
+      "Please wait for the current reply.",
+    );
+    expect(input).toHaveValue("second");
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
+  });
+
   it("shows the message limit after a refresh", async () => {
     const limit = "Limit reached.";
     mockFetch(stateRoute({ ...loaded, notice: limit }));

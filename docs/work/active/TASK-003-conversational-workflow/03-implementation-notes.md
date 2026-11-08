@@ -3,7 +3,7 @@
 **Spec revision:** approved 2026-11-08 ([01-spec.md](01-spec.md))
 **Plan:** [02-implementation-plan.md](02-implementation-plan.md)
 **Branch:** `feature/TASK-003-conversational-workflow` (from `71f3e96`; implementation committed by the user in `f99200b`)
-**Status:** All 16 plan steps are done. The clean install, `npm audit`, the AC-18 walkthrough (user), and CI for `f99200b` all passed. Review round 1 fixes are done (below). Ready for review round 2 after the user commits and CI passes.
+**Status:** All 16 plan steps are done. The clean install, `npm audit`, the AC-18 walkthrough (user), and CI for `f99200b` all passed. Review round 1 fixes are committed in `80434b5` (CI passed, reported by the user). Review round 2 fixes (N1, N3, plus the N2 handover note) are done (below) and wait for the user to commit; CI should be confirmed before closeout.
 
 ## Summary
 
@@ -122,6 +122,22 @@ Source: [05-task-review.md](05-task-review.md). The user chose to fix R2–R6, R
 **Checks after the fixes:**
 - **API:** 26 files, 339 tests pass.
 - **Web:** 24 files, 309 tests pass, plus 1 expected fail.
+- Lint, typecheck, and build pass. The format check passes (run with `--end-of-line auto` on this machine).
+
+## Review round 2 fixes
+
+Source: [05-task-review.md](05-task-review.md), round 2. The user chose to fix N1 and N3, and to record N2 in the TASK-004 handover.
+
+| Finding | Test first (red) | Fix |
+|---|---|---|
+| N1a: a refusal at the limit was not announced | Web: a refused message at the limit must reach the live region, and the input keeps its text (failed) | Every reply is announced, including one that stored no message |
+| N1b: Enter while a reply is pending was silently ignored | Web: Enter while busy must announce "Please wait for the current reply.", keep the text, and send nothing (failed) | Handled on the input's Enter key. The test also showed the real cause: while busy, the Send button (`loading`) cancels its own activation, so the form's submit never ran. A check inside `run()` alone did not fix it; the test stayed red until the input handler was added. |
+| N2: `top_count` bound vs the `rowCap` option | Not a code change | `TASK-004-HANDOVER.md` section 2: set caps in the registry; the option may only lower them |
+| N3: outdated comment | Not testable | `Outcome.pending` comment updated |
+
+**Checks after the fixes:**
+- **API:** 26 files, 339 tests pass.
+- **Web:** 24 files, 311 tests pass, plus 1 expected fail.
 - Lint, typecheck, and build pass. The format check passes (run with `--end-of-line auto` on this machine).
 
 ## Acceptance criteria mapping

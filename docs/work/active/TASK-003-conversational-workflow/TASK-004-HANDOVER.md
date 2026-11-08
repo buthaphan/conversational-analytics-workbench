@@ -20,7 +20,7 @@ abstract fetch(capability: CapabilityId, scope: Scope): Promise<ResultRowData[]>
   - `product_sales_performance`: `product_id`, `product_name`, `category`, `revenue`, `item_count`
 - **Types:** money and counts are JS numbers. IDs, names, and categories are strings. Do not sort, filter, or limit: the orchestrator stores the complete set and derives every view from it.
 - **Failure:** throw. The orchestrator then answers `ANSWERS.retrievalFailed`, keeps the current result, and keeps a pending switch (AC-7). Only the error's class name is logged.
-- **Row cap:** the orchestrator refuses results above `CapabilityDef.rowCap` (placeholder `DEFAULT_ROW_CAP = 100_000`). Profile the real data, then set real caps. The cap is checked after `fetch` returns, so a query should also guard its own size or cost (for example a `LIMIT cap + 1`), so an over-cap scope is detected without transferring everything.
+- **Row cap:** the orchestrator refuses results above `CapabilityDef.rowCap` (placeholder `DEFAULT_ROW_CAP = 100_000`). Profile the real data, then set real caps **in the registry**. The orchestrator's `rowCap` option is for tests and may only lower the cap: `validateAnalysis` bounds `top_count` by the registry value, so raising the cap through the option would wrongly refuse large valid top counts (review N2). The cap is checked after `fetch` returns, so a query should also guard its own size or cost (for example a `LIMIT cap + 1`), so an over-cap scope is detected without transferring everything.
 - **Scope:** `scope.start_date` is inclusive and `scope.end_date` is exclusive, `YYYY-MM-DD`, validated (at most 5 years). Pass both as query parameters, never by string concatenation.
 
 ### Reference aggregation (must match)

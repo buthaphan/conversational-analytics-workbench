@@ -100,7 +100,10 @@ interface Outcome {
   text: string;
   kind: string;
   card?: AnalysisCard;
-  /** The pending action after this turn; undefined keeps the current one (failures only). */
+  /**
+   * The pending action after this turn. Undefined keeps the current one: used for failures and for
+   * a confirmation with nothing to confirm (AC-7).
+   */
   pending?: PendingAction | null;
   counts?: { rowCount?: number; filteredCount?: number; shown?: number; baseCount?: number };
 }
