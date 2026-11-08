@@ -1,8 +1,8 @@
 # Function review: Conversational Analytics Workbench
 
-**Status:** Recommended; not yet accepted for specification  
-**Proposed task ID:** TASK-003 (provisional; follows TASK-002 design system and TASK-001 user accounts)  
-**Proposed branch:** `feature/TASK-003-customer-spending`
+**Status:** Accepted for specification on 2026-11-08. This review is superseded in detail by [ARCHITECTURE-PROPOSAL.md](ARCHITECTURE-PROPOSAL.md) (revision 5) and the decisions in [IDEA.md](IDEA.md#decision).  
+**Task IDs:** TASK-003 (core conversational workflow) and TASK-004 (data and AI adapters)  
+**Branches:** `feature/TASK-003-conversational-workflow`, then `feature/TASK-004-data-and-ai-adapters`
 
 ## Summary
 

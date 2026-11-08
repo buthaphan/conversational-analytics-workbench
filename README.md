@@ -9,8 +9,8 @@ A portfolio showcase for exploring business data with natural-language questions
 ## Current stage
 
 - **TASK-002 (design system):** complete. The design tokens, components, and chart theme are in `web/`.
-- **TASK-001 (user accounts and sign-in):** in progress on `feature/TASK-001-user-accounts`. It adds the NestJS API (`api/`), PostgreSQL, sign-in and sign-out with server-side sessions, and Docker Compose.
-- **Next:** the first analytics slice (proposed TASK-003).
+- **TASK-001 (user accounts and sign-in):** complete. The NestJS API (`api/`), PostgreSQL, sign-in and sign-out with server-side sessions, and Docker Compose.
+- **Next:** conversational analytics, accepted for specification ([architecture proposal](docs/ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md)). TASK-003 builds the core conversational workflow without cloud credentials; TASK-004 connects BigQuery and Claude.
 
 See `docs/PROJECT-SETUP.md` for decisions and open items, and `docs/work/` for task records.
 

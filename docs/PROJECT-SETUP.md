@@ -37,7 +37,7 @@
 - API: Node.js with NestJS.
 - Application and analysis-session state: PostgreSQL.
 - Analytical source: BigQuery public TheLook e-commerce dataset.
-- AI: Claude through Amazon Bedrock is the current direction; model choice, prompt/data boundaries, credentials, and cost controls must be detailed in the relevant spec.
+- AI: Claude through the Anthropic API, starting with Claude Sonnet 5.5, behind a provider-neutral interface (decision B, 2026-11-08). Amazon Bedrock can be added later for the AWS showcase. Prompt/data boundaries, credentials, and cost controls are detailed in the TASK-004 spec.
 - Local development: Docker Compose with separate `postgres`, `api`, and `web` services (layout decided in TASK-001 DEC-005; see the decisions table).
 - CI: GitHub Actions for formatting/lint, type checking, tests, production builds, and container builds. No AWS credentials or deployment steps in CI.
 - Development and showcase: local development; AWS showcase manually started and stopped by the user. Exact AWS services and spend controls remain open.
@@ -56,7 +56,7 @@
 - Build this app's authentication deliberately; do not copy authentication implementation from another project.
 - Scope all analysis/session state to the authenticated user. Delete the associated analysis session and result data whenever the authentication session ends.
 - Secrets: never put real credentials in prompts, source, fixtures, logs, Docker build context, images, or tracked files. Use ignored local environment files with safe examples only; supply runtime secrets through the chosen local/AWS mechanism.
-- External services: BigQuery and Bedrock use must be explicit in specs with data sent, credentials, quotas, failure behavior, and cost controls documented.
+- External services: BigQuery and Anthropic API use (and Bedrock, if added) must be explicit in specs with data sent, credentials, quotas, failure behavior, and cost controls documented.
 - AWS: no assistant-run AWS or deployment commands; user performs all cloud account and resource operations.
 
 ## Workflow configuration
@@ -72,15 +72,15 @@
 
 1. Showcase account provisioning on AWS; whether accounts themselves expire; password recovery. (Absolute session lifetime decided: 12 hours, TASK-001 DEC-007.)
 2. Maximum active result-set size and behavior when a complete result exceeds that limit. Never silently truncate results; determine the limit after profiling. (Decided: a capability's `limit` controls displayed/ranked rows from the stored result, not how much is retrieved.)
-3. BigQuery access path, query limits, data freshness/caching, dataset date anchor, and local development strategy. The public dataset can be queried through the no-charge BigQuery sandbox with feature limits; billing may be needed beyond that. Verify requirements in the data-access task.
-4. Bedrock model, prompt design, response schema, which values are sent, privacy boundary, quotas, and cost controls. Document separate Google and AWS runtime credentials.
-5. How narrative text is generated while exact figures remain grounded in validated results.
+3. ~~BigQuery access path~~ Decided (A): BigQuery Sandbox with backend-owned parameterized queries; TASK-003 develops against a fake data source. Still open for TASK-004: query limits, data freshness/caching, dataset date anchor.
+4. ~~Model and privacy boundary~~ Decided (B, C): Anthropic API with Claude Sonnet 5.5; the AI receives metadata and context only, never data rows or calculated figures. Still open for TASK-004: prompt design details, quotas, cost controls.
+5. ~~How narrative text is generated~~ Decided (C): the backend writes all numbers and findings from validated results.
 6. Whether voice input is included in a later milestone and where audio/transcripts would be processed. Recommendation: defer until privacy and data flow are explicit.
 7. Whether chart changes use both natural-language requests and direct UI controls.
 8. ~~Exact Docker service layout and local dependency setup.~~ Decided in TASK-001 (DEC-005): see the table below.
 9. AWS hosting topology, manual run/stop procedure, and budget guardrails.
 10. Final design tokens, chart palette, typography, responsive breakpoints, and light/dark mode (TASK-002 design system).
-11. Milestone 1 acceptance criteria and task sequence after TASK-002 and TASK-001.
+11. ~~Task sequence after TASK-002 and TASK-001~~ Decided: TASK-003 (core conversational workflow), then TASK-004 (data and AI adapters). See the conversational-analytics [ARCHITECTURE-PROPOSAL.md](ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md).
 
 ## Decisions recorded 2026-11-08
 
@@ -102,3 +102,4 @@
 | Docker layout | `compose.yaml`: `postgres` (18.6), `api` (NestJS; migrates on start; not published to the host), and `web` (nginx serving the build and proxying `/api` on the same origin, `127.0.0.1:8080`). Day-to-day development runs only `postgres` in Docker, with web and API via npm (TASK-001 DEC-005). |
 | Sign-in rate limit | 5 failures per email and 20 per client IP within 15 minutes, counted in PostgreSQL (TASK-001 DEC-006). |
 | Review skill name | Project review stage renamed to `/task-review` (output `05-task-review.md`) to avoid colliding with Claude Code's bundled `/code-review`. |
+| Conversational analytics | Accepted for specification: [ARCHITECTURE-PROPOSAL.md](ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md) (revision 5). Decisions A (BigQuery Sandbox, TheLook), B (Anthropic API, Claude Sonnet 5.5), C (backend-generated numbers; metadata-only to the AI). TASK-003 core workflow without credentials, then TASK-004 real adapters. |
