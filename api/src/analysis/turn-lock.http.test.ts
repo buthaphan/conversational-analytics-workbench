@@ -222,6 +222,25 @@ describe("two-phase turn (TASK-004 AC-1)", () => {
       expect(state.activeResult.view.view).toBe("bar");
     });
 
+    it("discards a turn that finishes after the deadline even if nobody took over, and frees the session (review round 2)", async () => {
+      const token = await signIn();
+      const gate = holdModel();
+      const late = start(send(token, "The previous calendar year"));
+      await gate.entered;
+
+      t.clock.advance(TURN_DEADLINE_MS + 1000);
+      // The server already reports the turn as over.
+      expect((await getState(token)).body.turnInProgress).toBe(false);
+
+      gate.open();
+      const response = await late;
+      expect(response.status).toBe(409);
+      expect(response.body).toMatchObject({ code: "turn_superseded" });
+      expect(await counts()).toMatchObject({ messages: 0, resultSets: 0 });
+      const session = await t.prisma.analysisSession.findFirstOrThrow();
+      expect(session.turnId).toBeNull();
+    });
+
     it("lets a new turn take over a marker older than the deadline; the old outcome is discarded", async () => {
       const token = await signIn();
       const gate = holdModel();
@@ -233,7 +252,10 @@ describe("two-phase turn (TASK-004 AC-1)", () => {
       expect(fresh.status).toBe(200);
 
       gate.open();
-      expect((await stale).status).toBe(409);
+      const dropped = await stale;
+      expect(dropped.status).toBe(409);
+      // Review S4: the dropped turn says so, rather than "still answering".
+      expect(dropped.body).toMatchObject({ code: "turn_superseded" });
       const state = (await getState(token)).body;
       expect(state.messages.map((m: { text: string }) => m.text)[0]).toBe(
         "What's the weather today?",

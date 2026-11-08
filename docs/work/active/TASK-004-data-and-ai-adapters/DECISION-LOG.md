@@ -56,6 +56,16 @@ Record only material decisions or change requests. Keep pending questions visibl
   - **Fill the window:** on wide screens the grid is at least `100vh - 9.5rem` tall (not in demo mode); the result card stretches and the chart grows (minimum 14rem), so the result and the conversation reach the bottom of the window.
 - **Impact:** presentation only; no API or behavior change. Web tests added for the scroll region. The user confirms in the browser.
 
+## DEC-005 — Task review round 1 findings
+
+- **Raised:** 2026-11-08 ([05-task-review.md](05-task-review.md))
+- **Status:** Approved
+- **User decisions:**
+  - **R1** (the deadline retry message never appears against the real API; AC-2): fix now.
+  - **R2** (a sign-out during a large phase-C save can time out cleanup; data never exposed; the sweeper retries): accept as a documented limitation; revisit with the AWS work. The other options were a lower cap, or storing rows before the locked step.
+  - **Suggestions S1–S4:** all done in this task. S1: demo-mode conversation minimum height. S2: a global error filter that logs class names only. S3: Claude stop-reason and tag hardening. S4: a distinct 409 when a stale turn was dropped.
+- **Impact:** AC-2 is restored by R1. R2 is carried into the closeout's known limitations. No spec change.
+
 ## Resolved items
 
 - **Anthropic billing** (resolved 2026-11-08): the user uses a Console account with $20 of prepaid API credit, and auto-reload is advised off. The idea record's Claude Max credit assumption does not apply.

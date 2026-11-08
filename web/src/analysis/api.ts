@@ -97,8 +97,12 @@ export interface AnalysisState {
   turnInProgress: boolean;
 }
 
-/** `turn-in-progress`: HTTP 409, another turn for this session is still running (TASK-004 AC-1). */
-export type ApiError = "signed-out" | "turn-in-progress" | "network" | "unexpected";
+/**
+ * `turn-in-progress`: HTTP 409, another turn for this session is still running (TASK-004 AC-1).
+ * `turn-dropped`: HTTP 409 `turn_superseded`, this turn took too long and was discarded (review S4).
+ */
+export type ApiError =
+  "signed-out" | "turn-in-progress" | "turn-dropped" | "network" | "unexpected";
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
 async function call<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
@@ -118,7 +122,13 @@ async function call<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
     return { ok: false, error: "network" };
   }
   if (response.status === 401) return { ok: false, error: "signed-out" };
-  if (response.status === 409) return { ok: false, error: "turn-in-progress" };
+  if (response.status === 409) {
+    const body = (await response.json().catch(() => null)) as { code?: string } | null;
+    return {
+      ok: false,
+      error: body?.code === "turn_superseded" ? "turn-dropped" : "turn-in-progress",
+    };
+  }
   if (!response.ok) return { ok: false, error: "unexpected" };
   return { ok: true, data: (await response.json()) as T };
 }

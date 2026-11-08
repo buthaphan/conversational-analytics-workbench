@@ -59,6 +59,28 @@ export class TurnInProgressError extends Error {
   }
 }
 
+/**
+ * This turn outlived the deadline and a newer turn took over, so its outcome was discarded
+ * (HTTP 409 `turn_superseded`, review S4).
+ */
+export class TurnSupersededError extends Error {
+  constructor() {
+    super("The turn took too long and was replaced by a newer one.");
+    this.name = "TurnSupersededError";
+  }
+}
+
+/**
+ * This turn finished after the deadline: the session already reports it as over, so its outcome is
+ * discarded and its own marker cleared (HTTP 409 `turn_superseded`, review round 2).
+ */
+export class TurnExpiredError extends TurnSupersededError {
+  constructor() {
+    super();
+    this.name = "TurnExpiredError";
+  }
+}
+
 /** The login session ended before or during the turn (HTTP 401); nothing is written. */
 export class SessionEndedError extends Error {
   constructor() {
@@ -244,8 +266,12 @@ export class AnalysisOrchestrator {
         SAVE_TRANSACTION,
       );
     } catch (error) {
-      if (!(error instanceof SessionEndedError) && !(error instanceof TurnInProgressError))
-        await this.release(claim.facts.id, claim.turnId);
+      // Not ours to release: the session is gone, or a newer turn owns the marker. An expired turn
+      // still owns its (stale) marker and clears it.
+      const notOurs =
+        error instanceof SessionEndedError ||
+        (error instanceof TurnSupersededError && !(error instanceof TurnExpiredError));
+      if (!notOurs) await this.release(claim.facts.id, claim.turnId);
       throw error;
     }
   }
@@ -260,7 +286,9 @@ export class AnalysisOrchestrator {
     fetched: Fetched | undefined,
   ): Promise<TurnResult> {
     const facts = await this.readFacts(tx, authSessionId, userId, true);
-    if (facts.turn?.id !== turnId) throw new TurnInProgressError(); // taken over after the deadline
+    if (facts.turn?.id !== turnId) throw new TurnSupersededError(); // taken over after the deadline
+    // Past the deadline the session already reports the turn as over, so it must not save now.
+    if (this.isStale(facts.turn)) throw new TurnExpiredError();
     await this.addMessage(tx, facts, "user", userText);
     const outcome: Outcome = decision
       ? await this.apply(tx, facts, decision, fetched)

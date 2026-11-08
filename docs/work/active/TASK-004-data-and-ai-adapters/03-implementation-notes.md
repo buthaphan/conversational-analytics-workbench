@@ -227,3 +227,28 @@ The system prompt needed no change. Model spend for the task so far: about $0.20
   - `Card` (`compact`, `stretch`), `Table` (`maxHeight`, `dense`, `hideCaption`), `ChartWithTable` (`compact`, `tableClassName`);
   - chart theme font size, token pairings, `logo-on-dark.svg`, tests.
 - **Docs:** README, `example.env`, `docs/product/THELOOK-PROFILE.md`, `docs/design/DESIGN-SYSTEM.md` (logo and header), the task folder, and `assets/brand/logo-on-dark.svg`.
+
+## Review round 1 fixes ([05-task-review.md](05-task-review.md), [DEC-005](DECISION-LOG.md))
+
+The user's decisions: fix R1; accept R2 as a limitation; do S1–S4. Each fix was written test-first.
+
+| Item      | Change                                                                                                                                                                                                                                                                                                                                          | Red, then green                                                                                                                                                    |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| R1 (AC-2) | `Workspace.tsx`: when polling ends with `turnInProgress: false` and no new message since waiting began, show and announce "Your last message took too long and wasn't answered. Please send it again." (warning alert). The real API ends an expired turn this way, which previously silently restored the old state. Cleared on the next send. | New test, where the mock switches to `false` with no new message: failed (no message), then passed. A companion test checks that a normal answer does not show it. |
+| S1        | `Workspace.tsx`: `lg:min-h-[28rem]` on the conversation wrapper when it follows the result column, so demo mode or a short result cannot squeeze it.                                                                                                                                                                                            | New test: failed, then passed.                                                                                                                                     |
+| S2        | New `api/src/common/safe-exception.filter.ts`, registered in `app.ts`: non-HTTP errors are logged as `Unhandled error (<ClassName>).` and answered with `{ statusCode: 500, message: "Internal server error" }`; HTTP exceptions keep Nest's handling.                                                                                          | `error-filter.http.test.ts`: an error whose message contains a row-like secret gave a log containing the secret, then only the class name.                         |
+| S3        | `claude-llm-client.ts`: a context-window stop also throws `ModelTruncatedError`; any other stop except `end_turn` or `stop_sequence` throws `ModelOutputError`; a closing `</user_message>` tag in user text is neutralised.                                                                                                                    | 4 new tests: failed, then passed.                                                                                                                                  |
+| S4        | `orchestrator.ts`: new `TurnSupersededError` for a marker taken over (it does not release the newer marker); `analysis.controller.ts` maps it to 409 `turn_superseded`; `api.ts` and `Workspace.tsx` show the "not answered" message and keep the typed text.                                                                                   | Stale-takeover test now expects `turn_superseded`, and a new web 409 test: both failed, then passed.                                                               |
+
+**Verification (after the fixes):** `npm run lint`, `npm run typecheck`, and `npm run build` exit 0. `npm test`: API 32 files, 427 passed; web 24 files, 333 passed plus 1 deliberately failing self-test.
+
+**R2** (phase-C sign-out can time out cleanup) is accepted as a known limitation (DEC-005) and carried into the closeout.
+
+## Review round 2 fixes
+
+- **N1:** `orchestrator.ts`: `TurnExpiredError` (a subclass of `TurnSupersededError`, so it maps to 409 `turn_superseded`). Phase C refuses to save after the deadline even when no newer turn took over, and the turn clears its own stale marker. Test: "discards a turn that finishes after the deadline even if nobody took over" in `turn-lock.http.test.ts`, red then green.
+- **N2:** `Workspace.tsx`: after a `turn_superseded` 409, a quiet refresh of the state (shared `withoutExamples` helper). The S4 test was extended.
+- **N3:** neutral wording, "Your last message wasn't answered. Please send it again." (`answers.ts`, `Workspace.tsx`).
+- **N4:** `safe-exception.filter.ts` logs the method and route pattern with the class name. The filter test asserts both.
+- **N5:** `claude-llm-client.ts` closing-tag pattern broadened, with the test extended.
+- **Verification:** lint, typecheck, and build exit 0. API 428 passed; web 333 passed plus 1 deliberately failing self-test.

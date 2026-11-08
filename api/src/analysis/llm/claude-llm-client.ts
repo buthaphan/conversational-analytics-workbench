@@ -103,6 +103,9 @@ export function structuredOutputSchema(schema: Schema): Schema {
 
 const OUTPUT_SCHEMA = structuredOutputSchema(TURN_DECISION_JSON_SCHEMA as Schema);
 
+/** User text cannot close its own tag; the decision is validated anyway (review S3). */
+const fenced = (text: string) => text.replace(/<\/(user_message)\b([^>]*)>/gi, "</ $1$2>");
+
 export class ClaudeLlmClient extends LlmClient {
   constructor(
     private readonly create: CreateMessage,
@@ -134,16 +137,20 @@ export class ClaudeLlmClient extends LlmClient {
         messages: [
           {
             role: "user",
-            content: `<context>\n${JSON.stringify(turn)}\n</context>\n\n<user_message>\n${userText}\n</user_message>`,
+            content: `<context>\n${JSON.stringify(turn)}\n</context>\n\n<user_message>\n${fenced(userText)}\n</user_message>`,
           },
         ],
       },
       { timeout: CLAUDE_TIMEOUT_MS, maxRetries: CLAUDE_MAX_RETRIES },
     );
 
-    if (response.stop_reason === "refusal") throw new ModelRefusalError("The model declined.");
-    if (response.stop_reason === "max_tokens")
+    // Only a normal end yields a decision; anything else is reported by its kind (review S3).
+    const stop: string | null = response.stop_reason;
+    if (stop === "refusal") throw new ModelRefusalError("The model declined.");
+    if (stop === "max_tokens" || stop === "model_context_window_exceeded")
       throw new ModelTruncatedError("The response was truncated.");
+    if (stop !== "end_turn" && stop !== "stop_sequence")
+      throw new ModelOutputError("The response did not complete normally.");
     const text = response.content
       .filter((block) => block.type === "text")
       .map((block) => block.text)

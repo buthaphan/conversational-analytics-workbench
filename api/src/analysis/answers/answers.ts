@@ -150,6 +150,7 @@ export const ANSWERS = {
   messageLimit:
     "This conversation has reached its message limit. Sign out and in again to start a fresh analysis.",
   turnInProgress: "I'm still answering your last message. Please wait a moment.",
+  turnDropped: "Your last message wasn't answered. Please send it again.",
   retrievalFailed:
     "Sorry, the data could not be loaded. Your current result is unchanged. Please try again.",
   demoUnknown: (examples: string[]) =>

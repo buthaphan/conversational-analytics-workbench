@@ -19,6 +19,7 @@ import {
   SessionEndedError,
   TurnInProgressError,
   type TurnResult,
+  TurnSupersededError,
 } from "./orchestrator/orchestrator";
 
 /** 409 while another turn runs (TASK-004 AC-1); 401 when the session ended during the request. */
@@ -28,6 +29,8 @@ async function mapTurnErrors<T>(run: () => Promise<T>): Promise<T> {
   } catch (error) {
     if (error instanceof TurnInProgressError)
       throw new ConflictException({ code: "turn_in_progress", message: ANSWERS.turnInProgress });
+    if (error instanceof TurnSupersededError)
+      throw new ConflictException({ code: "turn_superseded", message: ANSWERS.turnDropped });
     if (error instanceof SessionEndedError)
       throw new UnauthorizedException({ message: "Your session has ended. Sign in again." });
     throw error;

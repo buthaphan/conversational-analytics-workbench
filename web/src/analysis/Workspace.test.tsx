@@ -140,6 +140,14 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
     expect(chart.closest("section")?.className).toMatch(/(^|\s)lg:flex-1(\s|$)/);
   });
 
+  it("keeps a minimum conversation height when it follows the result column (review S1)", async () => {
+    mockFetch(stateRoute(loaded, examples));
+    render(<Workspace onSessionEnded={() => {}} />);
+    const history = await screen.findByRole("region", { name: "Conversation history" });
+    const wrapper = history.closest("section")?.parentElement as HTMLElement;
+    expect(wrapper.className).toMatch(/(^|\s)lg:min-h-\[28rem\](\s|$)/);
+  });
+
   it("matches the conversation's height to the result column on wide screens (TASK-004 DEC-004)", async () => {
     mockFetch(stateRoute(loaded));
     render(<Workspace onSessionEnded={() => {}} />);
@@ -589,6 +597,50 @@ describe("a turn in progress (TASK-004 AC-2)", () => {
     const ended = vi.fn();
     render(<Workspace onSessionEnded={ended} {...fast} />);
     await waitFor(() => expect(ended).toHaveBeenCalledTimes(1));
+  });
+
+  // Neutral wording: the turn may have expired or failed (review round 2).
+  const DROPPED = "Your last message wasn't answered. Please send it again.";
+
+  it("says so when the turn ends without an answer, as the real API reports an expired turn (review R1)", async () => {
+    // Waiting began with 2 messages; the turn then expires on the server with no new message.
+    mockFetch(
+      states({ ...answered, turnInProgress: true }, { ...answered, turnInProgress: false }),
+    );
+    const { container } = render(<Workspace onSessionEnded={() => {}} {...fast} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(DROPPED);
+    expect(screen.queryByText(STILL)).not.toBeInTheDocument();
+    expect(screen.getByTestId("reply-announcer")).toHaveTextContent(DROPPED);
+    expect(screen.getByRole("button", { name: "Send" })).not.toHaveAttribute("aria-disabled");
+    await expectNoAxeViolations(container);
+  });
+
+  it("does not show the dropped message when the answer arrives", async () => {
+    mockFetch(states({ ...empty, turnInProgress: true }, answered));
+    render(<Workspace onSessionEnded={() => {}} {...fast} />);
+    await screen.findByRole("list", { name: "Conversation" });
+    expect(screen.queryByText(DROPPED)).not.toBeInTheDocument();
+  });
+
+  it("tells the user a dropped turn was not answered, keeping the typed text, and refreshes (review S4)", async () => {
+    // The newer turn (from another tab) has answered by the time this tab refreshes.
+    mockFetch({
+      ...states(empty, answered),
+      "POST /api/analysis/messages": {
+        status: 409,
+        body: { code: "turn_superseded", message: "x" },
+      },
+    });
+    const u = userEvent.setup();
+    render(<Workspace onSessionEnded={() => {}} {...fast} />);
+    const input = await screen.findByRole("textbox", { name: "Ask a question" });
+    await u.type(input, "hello");
+    await u.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(DROPPED);
+    expect(screen.queryByText(STILL)).not.toBeInTheDocument();
+    expect(input).toHaveValue("hello");
+    const log = await screen.findByRole("list", { name: "Conversation" });
+    expect(within(log).getByText("Showing 2 of 87 customers…")).toBeInTheDocument();
   });
 
   it("stops waiting after the turn deadline and offers a retry", async () => {
