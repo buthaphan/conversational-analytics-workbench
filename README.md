@@ -11,7 +11,8 @@ A portfolio showcase for exploring business data with natural-language questions
 - **TASK-002 (design system):** complete. The design tokens, components, and chart theme are in `web/`.
 - **TASK-001 (user accounts and sign-in):** complete. The NestJS API (`api/`), PostgreSQL, sign-in and sign-out with server-side sessions, and Docker Compose.
 - **TASK-003 (conversational workflow):** complete. The analysis workspace, the backend rules that decide what each question may do, and a development demo model, all without cloud credentials ([architecture proposal](docs/ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md)).
-- **TASK-004 (real data and AI adapters):** in progress. BigQuery (TheLook) and Claude Sonnet 5.5 behind the same workflow ([task records](docs/work/active/TASK-004-data-and-ai-adapters/)).
+- **TASK-004 (real data and AI adapters):** complete. BigQuery (TheLook) and Claude Sonnet 5.5 behind the same workflow ([task records](docs/work/completed/TASK-004-data-and-ai-adapters/)).
+- **Next:** not chosen yet; candidates go through an idea record first.
 
 See `docs/PROJECT-SETUP.md` for decisions and open items, and `docs/work/` for task records.
 
