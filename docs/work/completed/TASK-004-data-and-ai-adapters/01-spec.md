@@ -45,9 +45,9 @@ TASK-003 proved the conversational workflow with a fixture and a demo model that
 | A Google Cloud project with the BigQuery API enabled (Sandbox), and `gcloud auth application-default login` done locally | User | The first approved profiling run succeeds |
 | An Anthropic Console account, an API key for this app in `.env`, and a monthly spend limit | User | The first approved Claude call succeeds; spend limit confirmed by the user |
 | **Billing:** whether Claude Max credits apply to API usage (normally they don't) | User | **Pending.** Blocks the first live Claude call only (plan step 9) |
-| BigQuery Sandbox limits (1 TB queried and 10 GB stored per month; we store nothing in BigQuery) | Claude | Recorded in the profile from the official docs and observed bytes per query |
+| BigQuery Sandbox limits (1 TB queried and 10 GB stored per month; we store nothing in BigQuery) | Agent | Recorded in the profile from the official docs and observed bytes per query |
 | `@anthropic-ai/sdk` and `@google-cloud/bigquery` (DEC-003) | User approves install | Install prompt; dependency audit recorded |
-| Claude runs live calls only after the user approves each run (DEC-002) | Claude | Recorded in the implementation notes |
+| The coding agent runs live calls only after the user approves each run (DEC-002) | Agent | Recorded in the implementation notes |
 | The public dataset `bigquery-public-data.thelook_ecommerce` stays available with its documented schema | — | Profiling |
 
 ## Acceptance criteria
@@ -70,7 +70,7 @@ TASK-003 proved the conversational workflow with a fixture and a demo model that
 
 ## Security, privacy, accessibility, and operations
 
-- **Credentials:** read only from the environment (`ANTHROPIC_API_KEY`) and Google application default credentials (outside the project). Claude never reads, prints, or copies them. Placeholders only in `example.env`. Config errors name variables, never values.
+- **Credentials:** read only from the environment (`ANTHROPIC_API_KEY`) and Google application default credentials (outside the project). The coding agent never reads, prints, or copies them. Placeholders only in `example.env`. Config errors name variables, never values.
 - **Model boundary:** the model receives only `ModelContext` (decision C), never rows, names, or figures. Its output is untrusted, validated by `parseTurnDecision`, and never executed. Prompt injection in user text can at most produce an invalid or unhelpful decision, which the backend already contains.
 - **Query safety:** fixed SQL, parameterized scope, read-only public dataset, bytes-billed cap, timeout, and over-cap guard.
 - **Personal data:** TheLook is synthetic; only customer ID and display name are selected (no email, address, or location). The data is not described as real.
@@ -111,8 +111,8 @@ TASK-003 proved the conversational workflow with a fixture and a demo model that
 
 - **Anthropic billing** (user, pending): confirm in the Console before plan step 9. If credits don't apply, a Console account with its own spend limit is assumed.
 - **Evaluation threshold** (user, recommended above: 90% overall, 100% safety). Approving the spec approves it.
-- **Row cap values** (Claude after profiling, user reviews): rule in AC-8.
-- **Date-window timestamp** (Claude after profiling): recommended `order_items.created_at` in UTC (when the item was ordered), confirmed or changed by the profile with its rationale.
+- **Row cap values** (agent after profiling, user reviews): rule in AC-8.
+- **Date-window timestamp** (agent after profiling): recommended `order_items.created_at` in UTC (when the item was ordered), confirmed or changed by the profile with its rationale.
 
 ## Revision history
 

@@ -74,7 +74,7 @@ Residual: a phase C that stores a very large result holds the row while it inser
 ## Step 5: SDKs and live-run setup (AC-11)
 
 - Installed with the user's approval (DEC-003): `@anthropic-ai/sdk` ^1.6.0, `@google-cloud/bigquery` ^9.6.0. `npm audit --omit=dev`: 0 vulnerabilities. Full audit: the same 10 moderate development-only `minimatch` findings via ESLint as before.
-- Live suites are `src/live/**/*.live.ts`, run only by `api/vitest.live.config.mts` through `npm run live:profile | live:test | live:eval -w api`. The scripts let Node load `../.env` (`--env-file-if-exists`); Claude never opens it. They are excluded from `npm test` (`*.test.ts` only) and from the build (`tsconfig.build.json`), and each suite skips with a message when its credentials are missing.
+- Live suites are `src/live/**/*.live.ts`, run only by `api/vitest.live.config.mts` through `npm run live:profile | live:test | live:eval -w api`. The scripts let Node load `../.env` (`--env-file-if-exists`); the coding agent never opens it. They are excluded from `npm test` (`*.test.ts` only) and from the build (`tsconfig.build.json`), and each suite skips with a message when its credentials are missing.
 
 ## Step 6: TheLook profile (AC-5)
 

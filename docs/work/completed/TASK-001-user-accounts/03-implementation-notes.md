@@ -114,7 +114,7 @@ The API test output includes four `ERROR [SessionStore]`/sweeper log lines. They
 - **Prisma 7 driver adapter (user-approved 2026-11-08):** Prisma 7 needs `@prisma/adapter-pg` and `pg` (plus `@types/pg`) to reach PostgreSQL. `.env` files are loaded with Node's built-in `--env-file` and `process.loadEnvFile`, so no `dotenv`.
 - **Prisma version:** npm's `latest` tag for `prisma` points to a release candidate (8.0.0-rc); the stable 7.10.1 (matching `@prisma/client`) was used.
 - **`prisma` is a runtime dependency:** the API container runs `prisma migrate deploy` on start (AC-16), so the CLI must be in the image.
-- **Settings template named `example.env` (user decision, 2026-11-08):** the project's permission rules block Claude from any `.env.*` file, including `.env.example`. The spec's `.env.example` refers to this file.
+- **Settings template named `example.env` (user decision, 2026-11-08):** the project's permission rules block the coding agent from any `.env.*` file, including `.env.example`. The spec's `.env.example` refers to this file.
 - **Config file extensions:** `api/eslint.config.mjs` and `api/vitest.config.mts`, because the API package is CommonJS (NestJS).
 - **Body parsing:** Nest's default parsers are off, and only a 10 kB JSON parser is registered, so form posts are rejected (AC-4, AC-11).
 - **Messages added beyond the spec:** `Something went wrong. Try again.` (unexpected sign-in response), `Could not sign out. Try again.` (sign-out failure; the user stays signed in), and the session-load network error reuses the AC-13 network message. A 400 from the server shows the generic incorrect-credentials message.
@@ -151,7 +151,7 @@ Run `docker compose up --build -d`, then `docker compose exec api node dist/seed
 | 9 | Narrow the window to 320 px: the sign-in form and shell fit without sideways scrolling | Pass (user) |
 
 Browser used: Chrome (current desktop version)  Date: 2026-11-08  
-Checks performed by the user; results reported to Claude and recorded here with the user.
+Checks performed by the user; results reported to the coding agent and recorded here with the user.
 
 ## Review fixes (implementation pass 2, 2026-11-08)
 

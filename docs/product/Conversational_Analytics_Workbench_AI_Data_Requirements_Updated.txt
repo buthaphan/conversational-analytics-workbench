@@ -380,6 +380,6 @@ Identify assumptions rather than silently making major decisions.
 
 Help me understand the implementation so I can maintain it and explain it confidently in software engineering interviews.
 
-I will use Claude Code for implementation and ChatGPT for planning, mentoring, and reviewing architectural decisions.
+I will use an AI coding agent for implementation and an AI assistant for planning, mentoring, and reviewing architectural decisions.
 
 The goal is to build a maintainable, secure, production-minded AI analytics application, not simply demonstrate that an LLM can generate charts.

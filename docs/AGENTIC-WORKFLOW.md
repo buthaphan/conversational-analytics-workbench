@@ -6,7 +6,7 @@ This workflow keeps each stage's inputs and outputs visible, prevents unapproved
 
 | Stage | Owner | Output | Purpose / next handoff |
 |---|---|---|---|
-| 0. Idea capture | User + Claude | `docs/ideas/YYYY-MM-DD-short-description/IDEA.md` | Record the problem, intended outcome, context, constraints, and open questions. |
+| 0. Idea capture | User + coding agent | `docs/ideas/YYYY-MM-DD-short-description/IDEA.md` | Record the problem, intended outcome, context, constraints, and open questions. |
 | 1. Function review | `/function-review` | Same folder: `FUNCTION-REVIEW.md` | Assess user/value, scope, risks, dependencies, open decisions, recommendation, and candidate task/branch. This is not a build spec. |
 | Gate: commit and branch | User | Idea record committed on base branch; user-created feature branch | Preserve the idea record and isolate task work before specification. |
 | 2. Specify | `/spec-driven` | Task `01-spec.md` | Define goal, users, boundaries, measurable acceptance criteria, Definition of Done, risks, and test plan. User approves before implementation. |
@@ -14,7 +14,7 @@ This workflow keeps each stage's inputs and outputs visible, prevents unapproved
 | 4. Implement | `/implementation` | Code/tests and `03-implementation-notes.md` | Implement against approved scope; record test-first steps, results, deviations, and evidence. |
 | 5. Simplicity review | `/code-simplicity`, only when warranted | Optional `04-simplicity-review.md` | Address meaningful complexity, coupling, duplication, or cohesion concerns without changing behavior or scope. |
 | 6. Task review | `/task-review` | `05-task-review.md` | Independently assess the diff, tests, security-relevant changes, and each acceptance criterion. |
-| 7. Closeout | User + Claude | `06-closeout.md` | Record DoD status, review resolution, verification, known limitations, pending decisions, and release/CI state. User accepts completion. |
+| 7. Closeout | User + coding agent | `06-closeout.md` | Record DoD status, review resolution, verification, known limitations, pending decisions, and release/CI state. User accepts completion. |
 | 8. Opportunity review | `/opportunity-review`, when useful | Optional `07-opportunity-review.md` | Record worthwhile follow-up ideas after meaningful work. |
 
 Use the available named skills if installed. If unavailable, perform the stage explicitly and preserve the same handoff artifact rather than pretending a skill ran.
@@ -30,7 +30,7 @@ Use the available named skills if installed. If unavailable, perform the stage e
 
 1. When the user chooses an idea to progress, record the decision in that idea folder's `IDEA.md`: status `accepted for specification`, decision date, chosen scope, and the proposed task/branch. This records intent but does not bypass the commit-and-branch gate. Then inspect Git status read-only.
 2. If the idea record is uncommitted, ask the user to commit it on the base branch. Wait for confirmation; do not stage or commit on the user's behalf unless the project agreement explicitly authorizes that action.
-3. The user creates the local feature branch using the proposed task ID/name. Claude verifies the active branch and clean working tree with read-only inspection.
+3. The user creates the local feature branch using the proposed task ID/name. The coding agent verifies the active branch and clean working tree with read-only inspection.
 4. If the branch is wrong, the tree is dirty, or other changes could move with the branch, stop and explain what needs attention. Do not switch branches, stash, discard, or move changes automatically.
 5. After verification, create `docs/work/active/TASK-###-short-name/00-context.md`, linking to the committed idea record and summarizing only the relevant decisions.
 6. Start `/spec-driven` on that branch. Do not write task-specific specs on the base branch.
