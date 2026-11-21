@@ -4,35 +4,91 @@
 
 **Ask your data. See the evidence.**
 
-A portfolio showcase for exploring business data with natural-language questions. The assistant selects from ten approved data capabilities; the application validates requests and performs calculations; charts and tables present the verified results. Users can ask follow-up questions against the active result set and must confirm before switching to a different data scope.
+Ask a business question in plain English and get an answer you can check. Claude chooses one approved analysis and fills in its settings; the API validates that choice; BigQuery and PostgreSQL calculate every number. The model never writes SQL and never sees the figures, so it cannot invent them. Each answer comes with a chart and the table of exact values behind it.
 
-## Current stage
+![The workspace: revenue by month for 2025 compared with 2024, with its table, period totals, and the conversation](assets/screenshots/workspace.png)
 
-- **TASK-002 (design system):** complete. The design tokens, components, and chart theme are in `web/`.
-- **TASK-001 (user accounts and sign-in):** complete. The NestJS API (`api/`), PostgreSQL, sign-in and sign-out with server-side sessions, and Docker Compose.
-- **TASK-003 (conversational workflow):** complete. The analysis workspace, the backend rules that decide what each question may do, and a development demo model, all without cloud credentials ([architecture proposal](docs/ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md)).
-- **TASK-004 (real data and AI adapters):** complete. BigQuery (TheLook) and Claude Sonnet 5.5 behind the same workflow ([task records](docs/work/completed/TASK-004-data-and-ai-adapters/)).
-- **TASK-005 (sales trends and group performance):** complete. Sales over time by day, week, or month (optionally for categories or a department, and compared with a second period); product sales grouped by category, department, or brand; line, horizontal bar, and pie charts ([task records](docs/work/completed/TASK-005-sales-trends-and-groups/)).
+<sub>Demo mode with the synthetic development data. The real setup uses Google's public TheLook e-commerce dataset in BigQuery.</sub>
 
-See `docs/PROJECT-SETUP.md` for decisions and open items, and `docs/work/` for task records.
+## What it does
 
-## Run locally
+- **Three analyses built**, of ten planned in the [capability catalogue](docs/product/AI-DATA-CAPABILITIES.md):
+  - customer spending: top or lowest spenders, filters, and the share of spending from the top customers;
+  - product sales, grouped by category, department, or brand;
+  - sales over time by day, week, or month, optionally compared with the previous period, the previous year, or chosen dates.
+- **Follow-up questions work on the current result.** Sorting, filtering, grouping, or changing the chart never reloads data. Loading a different period or dataset asks first (**Switch** or **Keep current**), so a result is never replaced silently.
+- **Charts that suit the result:** line, bar, horizontal bar, pie, and table, each with its exact values.
+- **Sign-in with server-side sessions.** One session per user; the analysis data is deleted when the session ends.
+
+## How it stays accurate
+
+```mermaid
+flowchart LR
+  Q[Question] --> M["Claude<br/>chooses an approved analysis<br/>(structured output)"]
+  M --> V["API<br/>validates the choice"]
+  V -->|new data, after the user confirms| B[("BigQuery<br/>fixed, parameterized SQL")]
+  B --> P[("PostgreSQL<br/>stored result")]
+  V -->|follow-up on the current result| P
+  P --> A["Answer, chart, and table<br/>written from the computed figures"]
+```
+
+- **The model only selects.** Its reply must match a strict schema; the API checks every field against the capability's rules and the stored result before anything runs.
+- **Every query is fixed and parameterized.** No value from the model or the user is pasted into SQL.
+- **The answer text is written by the application** from the computed figures, so every number in an answer comes from the backend's calculation, never from the model.
+
+**Evidence:**
+
+| Check                                                                        | Result                                                                       |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Known-answer check: the BigQuery queries against reference calculation rules | 17 of 17 exact                                                               |
+| Model evaluation: 61 decision cases on Claude Sonnet 5.5                     | 60 of 61 (98.4%), safety cases 11 of 11                                      |
+| Cost and speed of a turn                                                     | about $0.003 and 2 s for the model decision                                  |
+| Automated tests                                                              | about 1,050 (API and web), run in CI with lint, typecheck, format, and build |
+
+## Tech stack
+
+- **Web:** React, TypeScript, Vite, Tailwind CSS, ECharts
+- **API:** NestJS, Prisma, PostgreSQL
+- **Data and AI:** BigQuery (TheLook public dataset), Claude API with structured outputs
+- **Quality:** Vitest, axe accessibility checks, live known-answer and model-evaluation suites
+- **Delivery:** Docker Compose, GitHub Actions
+
+## Try it (no accounts or keys needed)
+
+The development defaults use a demo model that understands a fixed list of example questions (shown as buttons) and a synthetic dataset, so the app runs without any credentials or cost.
+
+You need Node 24 (see `.nvmrc`) and Docker Desktop.
+
+```bash
+cp example.env .env                                   # local placeholders only
+docker compose up --build -d
+docker compose exec api node dist/seed/seed-cli.js   # creates the local account
+```
+
+Open **http://127.0.0.1:8080** (use exactly this address: `localhost` is a different origin and sign-in is refused) and sign in as `user@example.test` with the local development password from `docs/PROJECT-SETUP.md`. Try **Show monthly sales for 2025**, then **Compare with the previous year**.
+
+## How it was built
+
+Each feature went through a written spec with measurable acceptance criteria, test-first implementation, an independent review, and a recorded closeout, using AI coding agents within that workflow ([workflow](docs/AGENTIC-WORKFLOW.md)). The task records, including every decision and its reasoning, are in [docs/work/completed/](docs/work/completed/).
+
+| Task     | Delivered                                                                                                                                                                            |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| TASK-001 | Sign-in and sign-out, server-side sessions, NestJS API, PostgreSQL, Docker Compose                                                                                                   |
+| TASK-002 | Design system: tokens, components, chart theme                                                                                                                                       |
+| TASK-003 | The analysis workspace and the backend rules for each question, with a demo model ([architecture proposal](docs/ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md)) |
+| TASK-004 | Real adapters: BigQuery (TheLook) and Claude Sonnet 5.5, the known-answer check, and the model evaluation                                                                            |
+| TASK-005 | Sales over time with comparisons, grouped product sales, and line, horizontal bar, and pie charts                                                                                    |
+
+**Next:** more analyses from the catalogue, and a public showcase on AWS. Decisions and open items are in `docs/PROJECT-SETUP.md`.
+
+## Run locally (development)
 
 You need Node 24 (see `.nvmrc`) and Docker Desktop.
 
 1. Copy the settings template: `cp example.env .env`. All values are local placeholders.
 2. Install dependencies: `npm ci`.
 
-**Whole stack in Docker** (closest to the showcase):
-
-```bash
-docker compose up --build -d
-docker compose exec api node dist/seed/seed-cli.js   # creates the local account
-```
-
-Open **http://127.0.0.1:8080**, using exactly this address: `localhost` is a different origin and sign-in will be refused. Sign in as `user@example.test` with the local development password from `docs/PROJECT-SETUP.md`.
-
-**Day-to-day development** (instant reload):
+The whole stack in Docker is described under [Try it](#try-it-no-accounts-or-keys-needed). For day-to-day development with instant reload:
 
 ```bash
 docker compose up -d postgres         # database only
@@ -101,7 +157,7 @@ The local account and its weak password exist for local development and tests on
 
 ## Project references
 
-- `docs/product/AI-DATA-CAPABILITIES.md` — the ten data capabilities and interaction contract.
+- `docs/product/AI-DATA-CAPABILITIES.md` — the capability catalogue (three built, seven planned) and interaction contract.
 - `docs/security/SECURITY-BASELINE.md` — privacy and security requirements.
 - `docs/design/DESIGN-SYSTEM.md` — visual direction and brand references.
 - `assets/brand/` — selected logo assets and reference image.
