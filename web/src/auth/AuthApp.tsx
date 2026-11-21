@@ -2,6 +2,7 @@ import { type ComponentType, useCallback, useEffect, useRef, useState } from "re
 import { Workspace } from "../analysis/Workspace";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
+import { Icon } from "../components/ui/Icon";
 import { Spinner } from "../components/ui/Spinner";
 import { Layout } from "../layout/Layout";
 import { type User, getSession, signOut } from "./api";
@@ -119,14 +120,18 @@ export function AuthApp({ workspace: SignedInWorkspace = Workspace }: AuthAppPro
     <Layout
       actions={
         <>
-          <span className="text-body-sm text-on-primary">{state.user.email}</span>
-          {/* On the navy header the default teal focus ring is too faint (TASK-004 DEC-004). */}
+          <span className="flex items-center gap-2 text-body-sm">
+            <Icon name="user" className="size-5 text-on-brand-accent" />
+            <span className="text-on-brand-accent">{state.user.email}</span>
+          </span>
+          {/* On the navy header the default teal focus ring is too faint (TASK-004 DEC-004).
+              Outlined in white on the navy, like the header text (tested pairing). */}
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
             loading={signingOut}
             onClick={handleSignOut}
-            className="focus-visible:outline-on-primary"
+            className="border border-on-primary text-on-primary hover:bg-primary-hover focus-visible:outline-on-primary"
           >
             Sign out
           </Button>

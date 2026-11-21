@@ -18,11 +18,71 @@ export interface Filter {
   values?: string[];
 }
 
+export type ViewName = "bar" | "horizontal_bar" | "line" | "pie" | "table";
+export type Interval = "day" | "week" | "month";
+export type SeriesMeasure = "revenue" | "order_count" | "item_count";
+export type GroupDimension = "category" | "department" | "brand";
+
 export interface ViewSettings {
   filters: Filter[];
   sort: { field: string; direction: "asc" | "desc" };
   limit: number;
-  view: "bar" | "table";
+  view: ViewName;
+  /** Time series only (TASK-005). */
+  interval?: Interval;
+  measure?: SeriesMeasure;
+  /** A grouped product result (TASK-005 AC-8). */
+  group_by?: GroupDimension;
+  groupLimit?: number;
+}
+
+/** A time series' product filter and comparison (TASK-005 AC-3). */
+export interface RequestParameters {
+  product_filter?: { field: "category" | "department"; values: string[] };
+  comparison?:
+    | { baseline: "previous_period" | "previous_year" }
+    | { baseline: "custom"; start_date: string; end_date: string };
+}
+
+export type SeriesTotals = Record<SeriesMeasure, number>;
+
+export interface SeriesBucket extends SeriesTotals {
+  label: string;
+  firstDay: string;
+  lastDay: string;
+  partial: boolean;
+}
+
+/** Buckets of the main and comparison periods; bucket k pairs with bucket k (TASK-005 AC-5). */
+export interface SeriesView {
+  interval: Interval;
+  measure: SeriesMeasure;
+  main: SeriesBucket[];
+  comparison?: SeriesBucket[];
+  lengthsDiffer: boolean;
+  totals: {
+    main: SeriesTotals;
+    comparison?: SeriesTotals;
+    change?: Record<SeriesMeasure, { amount: number; percent: number | null }>;
+  };
+}
+
+export type GroupRow = { key: string; product_count: number } & Record<string, CellValue>;
+export type OtherRow = GroupRow & { key: "Other"; groups: number };
+
+/** A grouped product result (TASK-005 AC-8, AC-9). */
+export interface GroupedView {
+  groupBy: GroupDimension;
+  groupCount: number;
+  rowCount: number;
+  filteredCount: number;
+  groups: GroupRow[];
+  other: OtherRow | null;
+  pie?: {
+    measure: string;
+    slices: (GroupRow & { share: number })[];
+    other: (OtherRow & { share: number }) | null;
+  };
 }
 
 export interface FieldInfo {
@@ -40,8 +100,13 @@ export interface ActiveResult {
   fields: FieldInfo[];
   rowCount: number;
   filteredCount: number;
+  /** Entity rows; empty for a time series. */
   rows: Row[];
   view: ViewSettings;
+  parameters?: RequestParameters;
+  series?: SeriesView;
+  comparisonScope?: Scope;
+  grouped?: GroupedView;
 }
 
 interface CardBase {
@@ -61,6 +126,8 @@ export type AnalysisCard =
       median: number | null;
       min: number | null;
       max: number | null;
+      /** A time series' summary: its bucket size and the lowest and highest buckets. */
+      buckets?: { interval: Interval; lowest: string | null; highest: string | null };
     })
   | (CardBase & {
       operation: "concentration";
@@ -69,11 +136,6 @@ export type AnalysisCard =
       topTotal: number;
       total: number;
       share: number | null;
-    })
-  | (CardBase & {
-      operation: "group";
-      groupBy: string;
-      groups: ({ key: string; rows: number } & Record<string, CellValue>)[];
     });
 
 export interface ChatMessage {
@@ -84,7 +146,7 @@ export interface ChatMessage {
 }
 
 export type PendingAction =
-  | { type: "switch"; capability: string; scope: Scope }
+  | { type: "switch"; capability: string; scope: Scope; parameters?: RequestParameters }
   | { type: "clarification"; question: string };
 
 export interface AnalysisState {

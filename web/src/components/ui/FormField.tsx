@@ -15,6 +15,8 @@ export interface FormFieldProps {
   /** Validation message; marks the control invalid when present. */
   error?: string;
   required?: boolean;
+  /** Keeps the label for assistive technology only, when the control's context already names it. */
+  hideLabel?: boolean;
   className?: string;
   children: (control: FieldControlProps) => ReactNode;
 }
@@ -24,6 +26,7 @@ export function FormField({
   description,
   error,
   required = false,
+  hideLabel = false,
   className,
   children,
 }: FormFieldProps) {
@@ -34,7 +37,7 @@ export function FormField({
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <label htmlFor={id} className="text-label text-fg">
+      <label htmlFor={id} className={cn("text-label text-fg", hideLabel && "sr-only")}>
         {label}
         {required && <span className="ml-1 font-normal text-fg-secondary">(required)</span>}
       </label>

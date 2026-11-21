@@ -13,7 +13,7 @@ TheLook is regenerated continuously: its newest rows are only days old, and some
 | `order_items` | 181,610 | 13.6 MB | `order_id`, `user_id`, `product_id`, `status`, `sale_price` (INT64 IDs, STRING status, FLOAT64 price) |
 | `orders`      | 125,136 | 6.8 MB  | `order_id`, `created_at` (TIMESTAMP)                                                                  |
 | `users`       | 100,000 | 19.8 MB | `id`, `first_name`, `last_name`                                                                       |
-| `products`    | 29,120  | 4.3 MB  | `id`, `name`, `category`                                                                              |
+| `products`    | 29,120  | 4.3 MB  | `id`, `name`, `category`, `department`, `brand` (the last two from TASK-005)                          |
 
 No table is partitioned or clustered. All columns are nullable in the schema. Not selected: emails, addresses, locations, age, gender, and every other personal field.
 
@@ -69,6 +69,36 @@ Complete items per year: 2019: 359; 2020: 1,153; 2021: 2,120; 2022: 3,367; 2023:
 
 **Row caps (AC-8):** 50,000 rows for both capabilities. Even the maximum 5-year scope fits with about twice the headroom for customers; products can never exceed 29,120.
 
+## Departments, brands, and daily sales (TASK-005)
+
+**Profiled:** 2026-11-15 (BigQuery `CURRENT_DATE()` was 2026-11-14 UTC), TASK-005 AC-1. Queries: the `task005_` entries in `api/src/live/profile.live.ts` (`npm run live:profile -w api -- -t task005`). Same rules as the capability queries: `Complete` items, window on the order's UTC date, cents per item.
+
+**Departments**
+- Two values, never null: `Men` (13,131 products, 14 categories) and `Women` (15,989 products, 22 categories).
+- 12 categories occur in both departments (for example Jeans, Sweaters, Tops & Tees). The other 14 occur in one only, for example Dresses (Women) and Suits & Sport Coats (Men). A category filter and a department filter therefore combine meaningfully.
+
+**Brands**
+- 2,756 distinct brands. 24 products have no brand, shown as "Unknown brand". No blank or untrimmed values. The longest name is 41 characters.
+- 37 brand names differ from another only by letter case or spacing. They are kept as separate brands, exactly as in the source.
+- Products per brand are very uneven: half the brands have 1–2 products, 90% have at most 22, and the largest has 1,034.
+- Revenue is spread thinly. Brands with sales: 2,092 in the last year and 2,512 in the last 5 years. Share of revenue held by the top 5, 20, and 30 brands: 8.5%, 22.3%, and 28.2% (last year), and 8.9%, 22.5%, and 28.5% (5 years). A top-20 view therefore leaves about 78% of revenue in "Other".
+- **Brand cap (TASK-005 S10):** 20 is kept. 30 adds only about 6 points of share, and longer lists stop being readable.
+
+**Daily sales**
+- Last year: sales on all 365 days, with 15–663 items, 11–449 orders, and $850.67–$39,063.48 per day.
+- Last 5 years: sales on 1,823 of 1,826 days, so a few early days are empty and show as zero. 1–663 items and $23.99–$39,063.48 per day.
+- Orders dated today or later: 11 orders with 15 completed items, all dated 2026-11-14 (UTC today at the time of the run). None were dated after today in this run.
+- **Time-series row cap (TASK-005 AC-4):** at most 1,827 days per period, so 3,654 rows with a comparison period. The cap is set to **4,000**.
+
+**Draft capability queries (last 5 years)**
+
+| Query | Rows | Processed |
+| --- | --- | --- |
+| Product sales with department and brand | 22,138 | 8.9 MB |
+| Daily sales, category filter (Jeans, Sweaters) | 1,578 | 7.0 MB |
+
+The product query stays within its 50,000-row cap. The daily query scans about the same amount as the existing capability queries.
+
 ## Cost and limits
 
 - Measured with the capability queries (known-answer run, 2026-11-08; order-date window):
@@ -79,6 +109,19 @@ Complete items per year: 2019: 359; 2020: 1,153; 2021: 2,120; 2022: 3,367; 2023:
   | Product sales, last 1 year      | 13,621 | 9.8 MB    | 3.6 s   |
   | Customer spending, last 5 years | 25,790 | 10.1 MB   | 4.2 s   |
   | Product sales, last 5 years     | 22,231 | 9.8 MB    | 5.1 s   |
+
+- Measured with the final TASK-005 queries (known-answer run, 2026-11-15; AC-1):
+
+  | Query                                                 | Rows   | Processed | Latency |
+  | ----------------------------------------------------- | ------ | --------- | ------- |
+  | Sales over time, last 1 year + previous period         | 730    | 8.1 MB    | 1.4 s   |
+  | Sales over time, last 5 years + previous period        | 2,613  | 8.1 MB    | 1.5 s   |
+  | Customer spending, last 1 year                        | 11,471 | 10.2 MB   | 2.5 s   |
+  | Product sales (with department and brand), last 1 year | 13,468 | 10.3 MB   | 4.1 s   |
+  | Customer spending, last 5 years                       | 25,775 | 10.2 MB   | 3.8 s   |
+  | Product sales (with department and brand), last 5 years | 22,140 | 10.3 MB  | 5.2 s   |
+
+  Sales over time transfers at most one row per day and period, so it is the fastest query; 5 years with a comparison stays well under its 4,000-row cap.
 
   Latency includes the transfer of all rows to the API. The BigQuery Sandbox free tier is 1 TB of queries per month (as recorded in the architecture proposal; not re-verified online), so showcase use is far inside it.
 

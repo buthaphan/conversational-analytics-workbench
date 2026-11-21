@@ -1,7 +1,13 @@
 import { BigQuery } from "@google-cloud/bigquery";
-import { CAPABILITIES, type CapabilityId, type Scope } from "../capabilities/registry";
-import { DataSource, type ResultRowData } from "./data-source";
+import {
+  CAPABILITIES,
+  type EntityCapabilityId,
+  type Scope,
+  TIME_SERIES_ROW_CAP,
+} from "../capabilities/registry";
+import { DataSource, type ResultRowData, UNKNOWN_BRAND } from "./data-source";
 import { fromCents } from "./money";
+import type { DailySalesRequest, DailySalesRow } from "./time-series";
 
 /**
  * TheLook in BigQuery (TASK-004 AC-6). This is the only file that imports the BigQuery SDK
@@ -31,7 +37,7 @@ const COMPLETED_IN_SCOPE = `
     AND o.created_at < TIMESTAMP(@end_date)`;
 const ITEM_CENTS = "CAST(ROUND(oi.sale_price * 100) AS INT64)";
 
-export const CAPABILITY_SQL: Record<CapabilityId, string> = {
+export const CAPABILITY_SQL: Record<EntityCapabilityId, string> = {
   customer_spending: `
   SELECT
     CAST(u.id AS STRING) AS customer_id,
@@ -46,12 +52,47 @@ export const CAPABILITY_SQL: Record<CapabilityId, string> = {
     CAST(p.id AS STRING) AS product_id,
     COALESCE(p.name, CONCAT('Product ', CAST(p.id AS STRING))) AS product_name,
     p.category AS category,
+    p.department AS department,
+    p.brand AS brand,
     SUM(${ITEM_CENTS}) AS revenue_cents,
     COUNT(*) AS item_count
   ${COMPLETED_IN_SCOPE.replace("{join}", `JOIN \`${D}.products\` p ON p.id = oi.product_id`)}
-  GROUP BY p.id, p.name, p.category
+  GROUP BY p.id, p.name, p.category, p.department, p.brand
   LIMIT @row_limit`,
 };
+
+/**
+ * Daily sales for `sales_time_series` (TASK-005 AC-4): one row per period and UTC order day with
+ * completed sales. Fixed text: the comparison is switched on by `@has_comparison`, and the product
+ * filter's field and values are parameters too (an empty `@filter_field` means no filter). The two
+ * periods may overlap; a day then counts in both. Zero days and the today cut-off are added by
+ * shared code (`time-series.ts`), not here.
+ */
+export const DAILY_SALES_SQL = `
+  SELECT
+    per.period AS period,
+    CAST(DATE(o.created_at) AS STRING) AS sales_date,
+    SUM(${ITEM_CENTS}) AS revenue_cents,
+    COUNT(DISTINCT oi.order_id) AS order_count,
+    COUNT(*) AS item_count
+  FROM \`${D}.order_items\` oi
+  JOIN \`${D}.orders\` o ON o.order_id = oi.order_id
+  JOIN \`${D}.products\` p ON p.id = oi.product_id
+  CROSS JOIN UNNEST([
+    STRUCT('main' AS period, @start_date AS start_date, @end_date AS end_date),
+    STRUCT('comparison' AS period, @comparison_start AS start_date, @comparison_end AS end_date)
+  ]) per
+  WHERE oi.status = 'Complete'
+    AND (per.period = 'main' OR @has_comparison)
+    AND o.created_at >= TIMESTAMP(per.start_date)
+    AND o.created_at < TIMESTAMP(per.end_date)
+    AND (
+      @filter_field = ''
+      OR (@filter_field = 'category' AND p.category IN UNNEST(@filter_values))
+      OR (@filter_field = 'department' AND p.department IN UNNEST(@filter_values))
+    )
+  GROUP BY period, sales_date
+  LIMIT @row_limit`;
 
 /** A retrieval failed. The message never includes the cause, the project, or the scope. */
 export class BigQueryRetrievalError extends Error {
@@ -67,7 +108,7 @@ export class BigQueryDataSource extends DataSource {
   }
 
   /** The job request for a capability and scope; exported for the dry run in the live check. */
-  static request(capability: CapabilityId, scope: Scope): QueryRequest {
+  static request(capability: EntityCapabilityId, scope: Scope): QueryRequest {
     return {
       sql: CAPABILITY_SQL[capability],
       params: {
@@ -81,7 +122,7 @@ export class BigQueryDataSource extends DataSource {
     };
   }
 
-  async fetch(capability: CapabilityId, scope: Scope): Promise<ResultRowData[]> {
+  async fetch(capability: EntityCapabilityId, scope: Scope): Promise<ResultRowData[]> {
     let result: QueryResult;
     try {
       result = await this.runner.run(BigQueryDataSource.request(capability, scope));
@@ -90,6 +131,54 @@ export class BigQueryDataSource extends DataSource {
     }
     try {
       return result.rows.map(capability === "customer_spending" ? customerRow : productRow);
+    } catch (cause) {
+      throw new BigQueryRetrievalError({ cause });
+    }
+  }
+
+  /** The job request for daily sales; exported for the dry run in the live check. */
+  static dailySalesRequest(request: DailySalesRequest): QueryRequest {
+    const main = request.periods.find((p) => p.period === "main")?.scope;
+    if (!main) throw new Error("A daily sales request needs its main period.");
+    // Unused when there is no comparison, but typed DATE parameters need a value.
+    const comparison = request.periods.find((p) => p.period === "comparison")?.scope ?? main;
+    const filter = request.productFilter;
+    return {
+      sql: DAILY_SALES_SQL,
+      params: {
+        start_date: main.start_date,
+        end_date: main.end_date,
+        has_comparison: comparison !== main,
+        comparison_start: comparison.start_date,
+        comparison_end: comparison.end_date,
+        filter_field: filter?.field ?? "",
+        filter_values: filter?.values ?? [],
+        row_limit: TIME_SERIES_ROW_CAP + 1,
+      },
+      types: {
+        start_date: "DATE",
+        end_date: "DATE",
+        has_comparison: "BOOL",
+        comparison_start: "DATE",
+        comparison_end: "DATE",
+        filter_field: "STRING",
+        filter_values: ["STRING"],
+        row_limit: "INT64",
+      },
+      maximumBytesBilled: MAX_BYTES_BILLED,
+      timeoutMs: QUERY_TIMEOUT_MS,
+    };
+  }
+
+  async fetchDailySales(request: DailySalesRequest): Promise<DailySalesRow[]> {
+    let result: QueryResult;
+    try {
+      result = await this.runner.run(BigQueryDataSource.dailySalesRequest(request));
+    } catch (cause) {
+      throw new BigQueryRetrievalError({ cause });
+    }
+    try {
+      return result.rows.map(dailyRow);
     } catch (cause) {
       throw new BigQueryRetrievalError({ cause });
     }
@@ -127,7 +216,25 @@ function productRow(row: Record<string, unknown>): ResultRowData {
     product_id: text(row.product_id),
     product_name: text(row.product_name),
     category: text(row.category),
+    department: text(row.department),
+    // A missing brand is labelled here, as in the reference (the SQL returns the source value).
+    brand: row.brand === null || row.brand === undefined ? UNKNOWN_BRAND : text(row.brand),
     revenue: fromCents(whole(row.revenue_cents)),
+    item_count: whole(row.item_count, 1),
+  };
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function dailyRow(row: Record<string, unknown>): DailySalesRow {
+  if (row.period !== "main" && row.period !== "comparison") throw new Error("Unknown period.");
+  if (typeof row.sales_date !== "string" || !ISO_DATE.test(row.sales_date))
+    throw new Error("Expected a YYYY-MM-DD date.");
+  return {
+    period: row.period,
+    date: row.sales_date,
+    revenue: fromCents(whole(row.revenue_cents)),
+    order_count: whole(row.order_count, 1),
     item_count: whole(row.item_count, 1),
   };
 }
@@ -135,9 +242,9 @@ function productRow(row: Record<string, unknown>): ResultRowData {
 export interface QueryRequest {
   sql: string;
   /** Named parameters (`@name` in the SQL). Never interpolated into the SQL text. */
-  params: Record<string, string | number>;
-  /** BigQuery types of the parameters, e.g. `{ start_date: "DATE" }`. */
-  types?: Record<string, string>;
+  params: Record<string, string | number | boolean | string[]>;
+  /** BigQuery types of the parameters, e.g. `{ start_date: "DATE" }`; `["STRING"]` is an array. */
+  types?: Record<string, string | string[]>;
   /** The job fails instead of scanning more than this. */
   maximumBytesBilled: number;
   timeoutMs: number;

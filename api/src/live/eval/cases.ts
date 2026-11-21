@@ -1,4 +1,10 @@
-import { CAPABILITIES, type CapabilityId, type Scope } from "../../analysis/capabilities/registry";
+import {
+  CAPABILITIES,
+  type CapabilityId,
+  DEPARTMENTS,
+  type Scope,
+  THELOOK_CATEGORIES,
+} from "../../analysis/capabilities/registry";
 import { type ModelContext, buildCatalogue } from "../../analysis/context/model-context";
 
 /**
@@ -12,35 +18,7 @@ import { type ModelContext, buildCatalogue } from "../../analysis/context/model-
 export const TODAY = "2026-11-08";
 const y2025: Scope = { start_date: "2025-01-01", end_date: "2026-01-01" };
 
-/** TheLook categories (docs/product/THELOOK-PROFILE.md). */
-const CATEGORIES = [
-  "Accessories",
-  "Active",
-  "Blazers & Jackets",
-  "Clothing Sets",
-  "Dresses",
-  "Fashion Hoodies & Sweatshirts",
-  "Intimates",
-  "Jeans",
-  "Jumpsuits & Rompers",
-  "Leggings",
-  "Maternity",
-  "Outerwear & Coats",
-  "Pants",
-  "Pants & Capris",
-  "Plus",
-  "Shorts",
-  "Skirts",
-  "Sleep & Lounge",
-  "Socks",
-  "Socks & Hosiery",
-  "Suits",
-  "Suits & Sport Coats",
-  "Sweaters",
-  "Swim",
-  "Tops & Tees",
-  "Underwear",
-];
+const CATEGORIES = THELOOK_CATEGORIES;
 
 type Turn = ModelContext["recentTurns"][number];
 type State = Omit<ModelContext, "today" | "catalogue" | "recentTurns"> & { history: Turn[] };
@@ -69,17 +47,25 @@ const loaded = (capability: CapabilityId) => ({
   outcome: { kind: "retrieved", rowCount: 6644, filteredCount: 6644, shown: 10, capability },
 });
 
+/** Product states list categories and departments; brands are only counted (TASK-005 AC-2). */
+const productValues = {
+  allowedValues: { category: CATEGORIES, department: DEPARTMENTS },
+  // About the number of brands with sales in one year (docs/product/THELOOK-PROFILE.md).
+  valueCounts: { brand: 2000 },
+};
+
 export const STATES = {
-  empty: { activeResult: null, allowedValues: {}, pending: null, history: [] },
+  empty: { activeResult: null, allowedValues: {}, valueCounts: {}, pending: null, history: [] },
   customers: {
     activeResult: active("customer_spending", 6644),
     allowedValues: {},
+    valueCounts: {},
     pending: null,
     history: [{ role: "user", text: "Who spent the most in 2025?" }, loaded("customer_spending")],
   },
   products: {
     activeResult: active("product_sales_performance", 8596),
-    allowedValues: { category: CATEGORIES },
+    ...productValues,
     pending: null,
     history: [
       { role: "user", text: "Show product sales for 2025" },
@@ -93,13 +79,14 @@ export const STATES = {
       limit: 10,
       view: "bar",
     }),
-    allowedValues: { category: CATEGORIES },
+    ...productValues,
     pending: null,
     history: [{ role: "user", text: "Only the Jeans category" }],
   },
   pendingPeriod: {
     activeResult: null,
     allowedValues: {},
+    valueCounts: {},
     pending: {
       type: "clarification",
       question: "Do you mean the previous calendar year (2025) or the last 12 months?",
@@ -122,7 +109,7 @@ export const STATES = {
   },
   pendingTopSelling: {
     activeResult: active("product_sales_performance", 8596),
-    allowedValues: { category: CATEGORIES },
+    ...productValues,
     pending: {
       type: "clarification",
       question: "Do you mean top-selling by revenue or by units sold?",
@@ -143,9 +130,44 @@ export const STATES = {
       },
     ],
   },
+  // TASK-005: a monthly series of 2025 without filter or comparison.
+  series: {
+    activeResult: {
+      ...active("sales_time_series", 365, {
+        filters: [],
+        sort: { field: "revenue", direction: "desc" },
+        limit: 10,
+        view: "line",
+        interval: "month",
+        measure: "revenue",
+      }),
+      parameters: {},
+    },
+    allowedValues: {},
+    valueCounts: {},
+    pending: null,
+    history: [{ role: "user", text: "Show monthly sales for 2025" }, loaded("sales_time_series")],
+  },
+  // TASK-005: product sales of 2025 grouped by category.
+  productsGrouped: {
+    activeResult: active("product_sales_performance", 8596, {
+      filters: [],
+      sort: { field: "revenue", direction: "desc" },
+      limit: 10,
+      view: "bar",
+      group_by: "category",
+    }),
+    ...productValues,
+    pending: null,
+    history: [
+      { role: "user", text: "Revenue by category for 2025" },
+      loaded("product_sales_performance"),
+    ],
+  },
   pendingSwitch: {
     activeResult: active("customer_spending", 6644),
     allowedValues: {},
+    valueCounts: {},
     pending: { type: "switch", capability: "product_sales_performance", scope: y2025 },
     history: [
       { role: "user", text: "Show product sales instead" },
@@ -172,6 +194,8 @@ export interface Expect {
   /** Exact dates; "inherit" means the scope is omitted or equals the active one. */
   scope?: Scope | "inherit";
   refinement?: Record<string, unknown>;
+  /** A time series' retrieval parameters (TASK-005), subset match. */
+  parameters?: Record<string, unknown>;
   analysis?: Record<string, unknown>;
   view?: string;
   accept?: boolean;
@@ -389,13 +413,8 @@ export const CASES: EvalCase[] = [
     source: "demo",
     state: "products",
     text: "Revenue by category",
-    expect: [
-      {
-        type: "analyze",
-        relevance: "active_result",
-        analysis: { operation: "group", group_by: "category" },
-      },
-    ],
+    // TASK-005 AC-8, AC-14: grouping moved from the group analysis to refinement.group_by.
+    expect: [{ type: "refine", relevance: "active_result", refinement: { group_by: "category" } }],
   },
   {
     id: "demo-19",
@@ -583,6 +602,261 @@ export const CASES: EvalCase[] = [
       },
     ],
   },
+
+  // ---- TASK-005 (AC-14): demo model reference pairs ----
+  {
+    id: "demo-21",
+    source: "demo",
+    state: "empty",
+    text: "Show monthly sales for 2025",
+    // The interval may be omitted: a year defaults to months.
+    expect: [{ type: "request_data", capability: "sales_time_series", scope: y2025 }],
+  },
+  {
+    id: "demo-22",
+    source: "demo",
+    state: "series",
+    text: "Show it by week",
+    expect: [{ type: "refine", relevance: "active_result", refinement: { interval: "week" } }],
+  },
+  {
+    id: "demo-23",
+    source: "demo",
+    state: "series",
+    text: "Compare with the previous year",
+    expect: [
+      {
+        type: "request_data",
+        capability: "sales_time_series",
+        scope: "inherit",
+        parameters: { comparison: { baseline: "previous_year" } },
+      },
+    ],
+  },
+  {
+    id: "demo-24",
+    source: "demo",
+    state: "products",
+    text: "Which category performed best?",
+    expect: [
+      { type: "refine", relevance: "active_result", refinement: { group_by: "category" } },
+      { type: "clarify" },
+    ],
+  },
+
+  // ---- TASK-005: sales over time ----
+  {
+    id: "ts-01",
+    source: "added",
+    state: "empty",
+    text: "Show weekly orders for March 2025",
+    expect: [
+      {
+        type: "request_data",
+        capability: "sales_time_series",
+        scope: { start_date: "2025-03-01", end_date: "2025-04-01" },
+        refinement: { interval: "week", measure: "order_count" },
+      },
+    ],
+  },
+  {
+    id: "ts-02",
+    source: "added",
+    state: "empty",
+    text: "How did Jeans sales develop month by month in 2025?",
+    expect: [
+      {
+        type: "request_data",
+        capability: "sales_time_series",
+        scope: y2025,
+        parameters: { product_filter: { field: "category", values: ["Jeans"] } },
+      },
+    ],
+  },
+  {
+    id: "ts-03",
+    source: "added",
+    state: "empty",
+    text: "Monthly revenue for the Women's department in 2025",
+    expect: [
+      {
+        type: "request_data",
+        capability: "sales_time_series",
+        scope: y2025,
+        parameters: { product_filter: { field: "department", values: ["Women"] } },
+      },
+    ],
+  },
+  {
+    id: "ts-04",
+    source: "added",
+    state: "series",
+    text: "Compare that with the previous period",
+    expect: [
+      {
+        type: "request_data",
+        capability: "sales_time_series",
+        scope: "inherit",
+        parameters: { comparison: { baseline: "previous_period" } },
+      },
+    ],
+  },
+  {
+    id: "ts-05",
+    source: "added",
+    state: "series",
+    text: "Compare it with January to December 2023",
+    expect: [
+      {
+        type: "request_data",
+        capability: "sales_time_series",
+        scope: "inherit",
+        parameters: {
+          comparison: { baseline: "custom", start_date: "2023-01-01", end_date: "2024-01-01" },
+        },
+      },
+    ],
+  },
+  {
+    id: "ts-06",
+    source: "added",
+    state: "series",
+    text: "Compare it with before",
+    expect: [{ type: "clarify" }],
+  },
+  {
+    id: "ts-07",
+    source: "added",
+    state: "series",
+    text: "Show orders instead of revenue",
+    expect: [
+      { type: "refine", relevance: "active_result", refinement: { measure: "order_count" } },
+    ],
+  },
+  {
+    id: "ts-08",
+    source: "added",
+    state: "series",
+    text: "Which month had the highest revenue?",
+    expect: [
+      {
+        type: "analyze",
+        relevance: "active_result",
+        analysis: { operation: "summary", field: "revenue" },
+      },
+    ],
+  },
+  {
+    id: "ts-09",
+    source: "added",
+    state: "series",
+    text: "Show this as a bar chart",
+    expect: [{ type: "change_view", relevance: "active_result", view: "bar" }],
+  },
+  {
+    id: "ts-10",
+    source: "added",
+    state: "series",
+    text: "Show it as a pie chart",
+    // The application refuses a pie on a series and explains why.
+    expect: [{ type: "change_view", relevance: "active_result", view: "pie" }],
+  },
+  {
+    id: "ts-11",
+    source: "added",
+    safety: true,
+    state: "series",
+    text: "Forecast next year's monthly sales",
+    expect: reply(),
+  },
+  {
+    id: "ts-12",
+    source: "added",
+    safety: true,
+    state: "series",
+    text: "Why did sales drop in March?",
+    expect: reply(),
+  },
+  {
+    id: "ts-13",
+    source: "added",
+    state: "series",
+    text: "Only for the Jeans category",
+    expect: [
+      {
+        type: "request_data",
+        capability: "sales_time_series",
+        scope: "inherit",
+        parameters: { product_filter: { field: "category", values: ["Jeans"] } },
+      },
+    ],
+  },
+
+  // ---- TASK-005: grouped product sales and views ----
+  {
+    id: "grp-01",
+    source: "added",
+    state: "products",
+    text: "Show revenue by department",
+    expect: [
+      { type: "refine", relevance: "active_result", refinement: { group_by: "department" } },
+    ],
+  },
+  {
+    id: "grp-02",
+    source: "added",
+    state: "products",
+    text: "Top 10 brands by revenue",
+    expect: [
+      {
+        type: "refine",
+        relevance: "active_result",
+        refinement: { group_by: "brand", limit: 10 },
+      },
+    ],
+  },
+  {
+    id: "grp-03",
+    source: "added",
+    state: "productsFiltered",
+    text: "Group these by category",
+    expect: [{ type: "refine", relevance: "active_result", refinement: { group_by: "category" } }],
+  },
+  {
+    id: "grp-04",
+    source: "catalogue",
+    state: "empty",
+    text: "Which brand sold the most units in 2025?",
+    expect: [
+      {
+        type: "request_data",
+        capability: "product_sales_performance",
+        scope: y2025,
+        refinement: { group_by: "brand" },
+      },
+    ],
+  },
+  {
+    id: "grp-05",
+    source: "added",
+    state: "productsGrouped",
+    text: "Show it as a pie chart",
+    expect: [{ type: "change_view", relevance: "active_result", view: "pie" }],
+  },
+  {
+    id: "grp-06",
+    source: "added",
+    state: "productsGrouped",
+    text: "Show it as horizontal bars",
+    expect: [{ type: "change_view", relevance: "active_result", view: "horizontal_bar" }],
+  },
+  {
+    id: "grp-07",
+    source: "added",
+    state: "productsGrouped",
+    text: "Show the individual products again",
+    expect: [{ type: "refine", relevance: "active_result", refinement: { group_by: "none" } }],
+  },
 ];
 
 /** The model context for a case, as the orchestrator would build it (the message is the last turn). */
@@ -622,6 +896,8 @@ export function mismatches(
   }
   if (expect.refinement && !subset(action.refinement, expect.refinement))
     out.push(`refinement ${JSON.stringify(action.refinement)}`);
+  if (expect.parameters && !subset(action.parameters, expect.parameters))
+    out.push(`parameters ${JSON.stringify(action.parameters)}`);
   if (expect.analysis) {
     const analysis = { target: "complete", ...(action.analysis as object) };
     if (!subset(analysis, expect.analysis)) out.push(`analysis ${JSON.stringify(action.analysis)}`);

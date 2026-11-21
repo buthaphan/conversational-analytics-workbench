@@ -25,6 +25,11 @@ const refinement = z
       .optional(),
     limit: z.number().int().optional(),
     clear_filters: z.boolean().optional(),
+    // TASK-005 (DEC-002): view settings. The registry checks which capability allows each.
+    group_by: z.enum(["category", "department", "brand", "none"]).optional(),
+    interval: z.enum(["day", "week", "month"]).optional(),
+    // An enum, so structured output cannot produce a malformed value (walkthrough W2).
+    measure: z.enum(["revenue", "order_count", "item_count"]).optional(),
   })
   .strict();
 
@@ -32,14 +37,41 @@ const scope = z
   .object({ start_date: z.string().max(10).optional(), end_date: z.string().max(10).optional() })
   .strict();
 
+/**
+ * Retrieval parameters of `sales_time_series` (TASK-005 AC-3). The comparison is a union so that
+ * custom dates are required where they apply: the structured-output schema allows at most 24
+ * optional properties (TASK-004), and optional dates would exceed it.
+ */
+const isoDate = z.string().max(10);
+const parameters = z
+  .object({
+    product_filter: z
+      .object({
+        field: z.enum(["category", "department"]),
+        values: z.array(z.string().min(1).max(100)).min(1).max(10),
+      })
+      .strict()
+      .optional(),
+    comparison: z
+      .discriminatedUnion("baseline", [
+        z.object({ baseline: z.literal("previous_period") }).strict(),
+        z.object({ baseline: z.literal("previous_year") }).strict(),
+        z
+          .object({ baseline: z.literal("custom"), start_date: isoDate, end_date: isoDate })
+          .strict(),
+      ])
+      .optional(),
+  })
+  .strict();
+
 const analysis = z
   .object({
-    operation: z.enum(["summary", "concentration", "group"]),
+    // TASK-005 AC-8: grouping is the refinement's group_by (a view), so there is no group analysis.
+    operation: z.enum(["summary", "concentration"]),
     field: z.string().max(64).optional(),
     measure: z.string().max(64).optional(),
     top_count: z.number().optional(),
     top_percent: z.number().optional(),
-    group_by: z.string().max(64).optional(),
     target: z.enum(["complete", "filtered", "displayed"]).default("complete"),
   })
   .strict()
@@ -59,6 +91,7 @@ const action = z.discriminatedUnion("type", [
       type: z.literal("request_data"),
       capability: z.string().min(1).max(64),
       scope: scope.optional(),
+      parameters: parameters.optional(),
       refinement: refinement.optional(),
     })
     .strict(),

@@ -48,7 +48,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 const COLOR_GROUPS: [string, (name: string) => boolean][] = [
   ["Brand", (n) => n.startsWith("brand-")],
   ["Surfaces", (n) => ["canvas", "surface", "surface-muted"].includes(n)],
-  ["Text", (n) => n.startsWith("fg") || n === "accent"],
+  ["Text", (n) => n.startsWith("fg") || n === "accent" || n === "highlight"],
+  ["Accent tints", (n) => ["accent-subtle", "highlight-subtle", "on-brand-accent"].includes(n)],
   ["Borders and focus", (n) => n.startsWith("border") || n === "focus"],
   ["Actions", (n) => /^(primary|on-primary|destructive|on-destructive)/.test(n)],
   ["Status", (n) => /^(success|warning|error|info)/.test(n)],

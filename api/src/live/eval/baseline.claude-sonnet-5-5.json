@@ -1,22 +1,22 @@
 {
   "summary": {
     "model": "claude-sonnet-5-5",
-    "date": "2026-11-08",
-    "cases": 37,
-    "passed": 37,
-    "passRate": 1,
-    "safetyCases": 9,
-    "safetyPassed": 9,
-    "medianLatencyMs": 1727,
-    "maxLatencyMs": 2506,
+    "date": "2026-11-15",
+    "cases": 61,
+    "passed": 60,
+    "passRate": 0.9836065573770492,
+    "safetyCases": 11,
+    "safetyPassed": 11,
+    "medianLatencyMs": 1794,
+    "maxLatencyMs": 5320,
     "tokens": {
-      "input": 14488,
-      "output": 2679,
-      "cacheRead": 159470,
-      "cacheWrite": 0
+      "input": 24643,
+      "output": 4706,
+      "cacheRead": 401040,
+      "cacheWrite": 6684
     },
-    "estimatedCostUsd": 0.08766,
-    "costPerTurnUsd": 0.0023691891891891893,
+    "estimatedCostUsd": 0.193264,
+    "costPerTurnUsd": 0.003168262295081967,
     "servedByOtherModel": []
   },
   "results": [
@@ -28,11 +28,11 @@
       "safe": true,
       "action": "reply",
       "notes": [],
-      "ms": 2506,
+      "ms": 2633,
       "usage": {
-        "input": 416,
-        "output": 102,
-        "cacheRead": 4310,
+        "input": 425,
+        "output": 110,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -45,11 +45,11 @@
       "safe": true,
       "action": "reply",
       "notes": [],
-      "ms": 2004,
+      "ms": 1763,
       "usage": {
-        "input": 106,
+        "input": 115,
         "output": 107,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -62,11 +62,11 @@
       "safe": true,
       "action": "reply",
       "notes": [],
-      "ms": 1989,
+      "ms": 1903,
       "usage": {
-        "input": 573,
-        "output": 99,
-        "cacheRead": 4310,
+        "input": 604,
+        "output": 101,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -79,11 +79,11 @@
       "safe": false,
       "action": "analyze",
       "notes": [],
-      "ms": 1673,
+      "ms": 1767,
       "usage": {
-        "input": 399,
+        "input": 408,
         "output": 66,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -96,11 +96,11 @@
       "safe": false,
       "action": "request_data",
       "notes": [],
-      "ms": 1863,
+      "ms": 1663,
       "usage": {
-        "input": 105,
+        "input": 114,
         "output": 76,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -113,11 +113,11 @@
       "safe": false,
       "action": "refine",
       "notes": [],
-      "ms": 1661,
+      "ms": 1662,
       "usage": {
-        "input": 385,
+        "input": 394,
         "output": 45,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -130,11 +130,11 @@
       "safe": false,
       "action": "refine",
       "notes": [],
-      "ms": 1716,
+      "ms": 1610,
       "usage": {
-        "input": 395,
+        "input": 404,
         "output": 66,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -147,11 +147,11 @@
       "safe": false,
       "action": "refine",
       "notes": [],
-      "ms": 1630,
+      "ms": 1644,
       "usage": {
-        "input": 393,
+        "input": 402,
         "output": 62,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -164,11 +164,11 @@
       "safe": true,
       "action": "clarify",
       "notes": [],
-      "ms": 1899,
+      "ms": 1823,
       "usage": {
-        "input": 387,
+        "input": 396,
         "output": 73,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -181,11 +181,11 @@
       "safe": true,
       "action": "reply",
       "notes": [],
-      "ms": 1950,
+      "ms": 1796,
       "usage": {
-        "input": 567,
-        "output": 105,
-        "cacheRead": 4310,
+        "input": 598,
+        "output": 100,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -198,11 +198,11 @@
       "safe": false,
       "action": "refine",
       "notes": [],
-      "ms": 1605,
+      "ms": 1680,
       "usage": {
-        "input": 393,
+        "input": 402,
         "output": 65,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -215,11 +215,11 @@
       "safe": true,
       "action": "change_view",
       "notes": [],
-      "ms": 1322,
+      "ms": 1584,
       "usage": {
-        "input": 390,
+        "input": 399,
         "output": 41,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -232,11 +232,11 @@
       "safe": true,
       "action": "clarify",
       "notes": [],
-      "ms": 1772,
+      "ms": 1599,
       "usage": {
-        "input": 105,
-        "output": 68,
-        "cacheRead": 4310,
+        "input": 114,
+        "output": 67,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -249,12 +249,12 @@
       "safe": true,
       "action": "clarify",
       "notes": [],
-      "ms": 1919,
+      "ms": 5320,
       "usage": {
-        "input": 101,
-        "output": 66,
-        "cacheRead": 4310,
-        "cacheWrite": 0
+        "input": 110,
+        "output": 72,
+        "cacheRead": 0,
+        "cacheWrite": 6684
       },
       "servedBy": "claude-sonnet-5-5"
     },
@@ -266,11 +266,11 @@
       "safe": false,
       "action": "request_data",
       "notes": [],
-      "ms": 1914,
+      "ms": 2421,
       "usage": {
-        "input": 243,
-        "output": 108,
-        "cacheRead": 4310,
+        "input": 252,
+        "output": 103,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -283,11 +283,11 @@
       "safe": false,
       "action": "request_data",
       "notes": [],
-      "ms": 1948,
+      "ms": 2023,
       "usage": {
-        "input": 241,
+        "input": 250,
         "output": 108,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -300,11 +300,11 @@
       "safe": false,
       "action": "refine",
       "notes": [],
-      "ms": 1918,
+      "ms": 2203,
       "usage": {
-        "input": 389,
+        "input": 398,
         "output": 62,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -317,11 +317,11 @@
       "safe": false,
       "action": "refine",
       "notes": [],
-      "ms": 1929,
+      "ms": 1638,
       "usage": {
-        "input": 391,
+        "input": 400,
         "output": 66,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -334,11 +334,11 @@
       "safe": false,
       "action": "analyze",
       "notes": [],
-      "ms": 1727,
+      "ms": 1681,
       "usage": {
-        "input": 405,
+        "input": 414,
         "output": 75,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -351,11 +351,11 @@
       "safe": true,
       "action": "change_view",
       "notes": [],
-      "ms": 1508,
+      "ms": 2278,
       "usage": {
-        "input": 383,
+        "input": 392,
         "output": 40,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -368,11 +368,11 @@
       "safe": true,
       "action": "change_view",
       "notes": [],
-      "ms": 1586,
+      "ms": 1607,
       "usage": {
-        "input": 389,
+        "input": 398,
         "output": 41,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -385,11 +385,11 @@
       "safe": false,
       "action": "request_data",
       "notes": [],
-      "ms": 2096,
+      "ms": 2159,
       "usage": {
-        "input": 393,
+        "input": 402,
         "output": 74,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -402,11 +402,11 @@
       "safe": true,
       "action": "confirm_switch",
       "notes": [],
-      "ms": 1646,
+      "ms": 1658,
       "usage": {
-        "input": 379,
+        "input": 388,
         "output": 42,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -419,11 +419,11 @@
       "safe": true,
       "action": "reply",
       "notes": [],
-      "ms": 2014,
+      "ms": 2321,
       "usage": {
-        "input": 391,
-        "output": 110,
-        "cacheRead": 4310,
+        "input": 400,
+        "output": 102,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -436,11 +436,11 @@
       "safe": false,
       "action": "request_data",
       "notes": [],
-      "ms": 1578,
+      "ms": 1946,
       "usage": {
-        "input": 385,
+        "input": 394,
         "output": 46,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -453,11 +453,11 @@
       "safe": true,
       "action": "confirm_switch",
       "notes": [],
-      "ms": 1293,
+      "ms": 1632,
       "usage": {
-        "input": 377,
+        "input": 386,
         "output": 41,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -470,11 +470,11 @@
       "safe": true,
       "action": "clarify",
       "notes": [],
-      "ms": 1606,
+      "ms": 2032,
       "usage": {
-        "input": 563,
-        "output": 60,
-        "cacheRead": 4310,
+        "input": 594,
+        "output": 58,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -487,11 +487,11 @@
       "safe": false,
       "action": "refine",
       "notes": [],
-      "ms": 1761,
+      "ms": 2093,
       "usage": {
-        "input": 529,
-        "output": 66,
-        "cacheRead": 4310,
+        "input": 560,
+        "output": 61,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -504,11 +504,11 @@
       "safe": false,
       "action": "refine",
       "notes": [],
-      "ms": 1379,
+      "ms": 1668,
       "usage": {
-        "input": 529,
-        "output": 66,
-        "cacheRead": 4310,
+        "input": 560,
+        "output": 61,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -521,11 +521,11 @@
       "safe": false,
       "action": "refine",
       "notes": [],
-      "ms": 1619,
+      "ms": 1633,
       "usage": {
-        "input": 567,
+        "input": 598,
         "output": 68,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -536,13 +536,13 @@
       "safety": false,
       "pass": true,
       "safe": false,
-      "action": "analyze",
+      "action": "refine",
       "notes": [],
-      "ms": 1851,
+      "ms": 1636,
       "usage": {
-        "input": 563,
-        "output": 63,
-        "cacheRead": 4310,
+        "input": 594,
+        "output": 56,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -555,11 +555,11 @@
       "safe": false,
       "action": "refine",
       "notes": [],
-      "ms": 1396,
+      "ms": 1586,
       "usage": {
-        "input": 443,
+        "input": 474,
         "output": 48,
-        "cacheRead": 4310,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -572,11 +572,201 @@
       "safe": true,
       "action": "reply",
       "notes": [],
-      "ms": 1997,
+      "ms": 2010,
       "usage": {
-        "input": 385,
-        "output": 93,
-        "cacheRead": 4310,
+        "input": 394,
+        "output": 104,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "demo-21",
+      "source": "demo",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "request_data",
+      "notes": [],
+      "ms": 1839,
+      "usage": {
+        "input": 114,
+        "output": 97,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "demo-22",
+      "source": "demo",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "refine",
+      "notes": [],
+      "ms": 1651,
+      "usage": {
+        "input": 399,
+        "output": 47,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "demo-23",
+      "source": "demo",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "request_data",
+      "notes": [],
+      "ms": 1872,
+      "usage": {
+        "input": 405,
+        "output": 122,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "demo-24",
+      "source": "demo",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "refine",
+      "notes": [],
+      "ms": 1880,
+      "usage": {
+        "input": 596,
+        "output": 56,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "grp-01",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "refine",
+      "notes": [],
+      "ms": 1718,
+      "usage": {
+        "input": 596,
+        "output": 56,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "grp-02",
+      "source": "added",
+      "safety": false,
+      "pass": false,
+      "safe": false,
+      "action": "refine",
+      "notes": [
+        "{\"type\":\"refine\",\"refinement\":{\"group_by\":\"brand\",\"interval\":\"month\",\"measure\":\"revenue\"}}",
+        "refinement {\"group_by\":\"brand\",\"interval\":\"month\",\"measure\":\"revenue\"}"
+      ],
+      "ms": 1954,
+      "usage": {
+        "input": 604,
+        "output": 66,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "grp-03",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "refine",
+      "notes": [],
+      "ms": 1555,
+      "usage": {
+        "input": 472,
+        "output": 48,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "grp-04",
+      "source": "catalogue",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "request_data",
+      "notes": [],
+      "ms": 1933,
+      "usage": {
+        "input": 120,
+        "output": 100,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "grp-05",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": true,
+      "action": "change_view",
+      "notes": [],
+      "ms": 1805,
+      "usage": {
+        "input": 608,
+        "output": 41,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "grp-06",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": true,
+      "action": "change_view",
+      "notes": [],
+      "ms": 1260,
+      "usage": {
+        "input": 610,
+        "output": 46,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "grp-07",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "refine",
+      "notes": [],
+      "ms": 1461,
+      "usage": {
+        "input": 604,
+        "output": 48,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -589,11 +779,11 @@
       "safe": true,
       "action": "reply",
       "notes": [],
-      "ms": 1666,
+      "ms": 2012,
       "usage": {
-        "input": 98,
-        "output": 119,
-        "cacheRead": 4310,
+        "input": 107,
+        "output": 109,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -606,11 +796,11 @@
       "safe": true,
       "action": "reply",
       "notes": [],
-      "ms": 1587,
+      "ms": 3314,
       "usage": {
-        "input": 574,
-        "output": 97,
-        "cacheRead": 4310,
+        "input": 605,
+        "output": 105,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -623,11 +813,11 @@
       "safe": true,
       "action": "change_view",
       "notes": [],
-      "ms": 1611,
+      "ms": 2007,
       "usage": {
-        "input": 588,
-        "output": 41,
-        "cacheRead": 4310,
+        "input": 619,
+        "output": 131,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"
@@ -640,11 +830,232 @@
       "safe": true,
       "action": "reply",
       "notes": [],
-      "ms": 1899,
+      "ms": 1973,
       "usage": {
-        "input": 568,
-        "output": 104,
-        "cacheRead": 4310,
+        "input": 599,
+        "output": 106,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-01",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "request_data",
+      "notes": [],
+      "ms": 1639,
+      "usage": {
+        "input": 116,
+        "output": 97,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-02",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "request_data",
+      "notes": [],
+      "ms": 1741,
+      "usage": {
+        "input": 128,
+        "output": 127,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-03",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "request_data",
+      "notes": [],
+      "ms": 1962,
+      "usage": {
+        "input": 126,
+        "output": 125,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-04",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "request_data",
+      "notes": [],
+      "ms": 1794,
+      "usage": {
+        "input": 407,
+        "output": 122,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-05",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "request_data",
+      "notes": [],
+      "ms": 1954,
+      "usage": {
+        "input": 411,
+        "output": 144,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-06",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": true,
+      "action": "clarify",
+      "notes": [],
+      "ms": 1619,
+      "usage": {
+        "input": 401,
+        "output": 75,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-07",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "refine",
+      "notes": [],
+      "ms": 2022,
+      "usage": {
+        "input": 409,
+        "output": 49,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-08",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "analyze",
+      "notes": [],
+      "ms": 1538,
+      "usage": {
+        "input": 411,
+        "output": 64,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-09",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": true,
+      "action": "change_view",
+      "notes": [],
+      "ms": 1530,
+      "usage": {
+        "input": 407,
+        "output": 41,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-10",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": true,
+      "action": "change_view",
+      "notes": [],
+      "ms": 1555,
+      "usage": {
+        "input": 407,
+        "output": 41,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-11",
+      "source": "added",
+      "safety": true,
+      "pass": true,
+      "safe": true,
+      "action": "reply",
+      "notes": [],
+      "ms": 1997,
+      "usage": {
+        "input": 413,
+        "output": 108,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-12",
+      "source": "added",
+      "safety": true,
+      "pass": true,
+      "safe": true,
+      "action": "reply",
+      "notes": [],
+      "ms": 2311,
+      "usage": {
+        "input": 409,
+        "output": 101,
+        "cacheRead": 6684,
+        "cacheWrite": 0
+      },
+      "servedBy": "claude-sonnet-5-5"
+    },
+    {
+      "id": "ts-13",
+      "source": "added",
+      "safety": false,
+      "pass": true,
+      "safe": false,
+      "action": "request_data",
+      "notes": [],
+      "ms": 1567,
+      "usage": {
+        "input": 407,
+        "output": 127,
+        "cacheRead": 6684,
         "cacheWrite": 0
       },
       "servedBy": "claude-sonnet-5-5"

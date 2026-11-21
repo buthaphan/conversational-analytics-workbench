@@ -143,14 +143,34 @@ const SCRIPT: [string, Build][] = [
     "Only the Jeans category",
     refine({ filters: [{ field: "category", op: "in", values: ["Jeans"] }] }),
   ],
+  // Grouping is a view setting (TASK-005 AC-8).
+  ["Revenue by category", refine({ group_by: "category" })],
   [
-    "Revenue by category",
+    "Which category performed best?",
+    refine({ group_by: "category", sort: { field: "revenue", direction: "desc" } }),
+  ],
+  // Sales over time (TASK-005 AC-12).
+  [
+    "Show monthly sales for 2025",
     () => ({
-      relevance: "active_result",
-      need: "analysis_on_current",
+      ...newData,
       action: {
-        type: "analyze",
-        analysis: { operation: "group", group_by: "category", target: "complete" },
+        type: "request_data",
+        capability: "sales_time_series",
+        scope: year(2025),
+        refinement: { interval: "month" },
+      },
+    }),
+  ],
+  ["Show it by week", refine({ interval: "week" })],
+  [
+    "Compare with the previous year",
+    () => ({
+      ...newData,
+      action: {
+        type: "request_data",
+        capability: "sales_time_series",
+        parameters: { comparison: { baseline: "previous_year" } },
       },
     }),
   ],

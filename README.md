@@ -12,7 +12,7 @@ A portfolio showcase for exploring business data with natural-language questions
 - **TASK-001 (user accounts and sign-in):** complete. The NestJS API (`api/`), PostgreSQL, sign-in and sign-out with server-side sessions, and Docker Compose.
 - **TASK-003 (conversational workflow):** complete. The analysis workspace, the backend rules that decide what each question may do, and a development demo model, all without cloud credentials ([architecture proposal](docs/ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md)).
 - **TASK-004 (real data and AI adapters):** complete. BigQuery (TheLook) and Claude Sonnet 5.5 behind the same workflow ([task records](docs/work/completed/TASK-004-data-and-ai-adapters/)).
-- **Next:** not chosen yet; candidates go through an idea record first.
+- **TASK-005 (sales trends and group performance):** complete. Sales over time by day, week, or month (optionally for categories or a department, and compared with a second period); product sales grouped by category, department, or brand; line, horizontal bar, and pie charts ([task records](docs/work/completed/TASK-005-sales-trends-and-groups/)).
 
 See `docs/PROJECT-SETUP.md` for decisions and open items, and `docs/work/` for task records.
 
@@ -46,10 +46,17 @@ The design reference page is at http://localhost:5173/design-reference (developm
 
 ## The analysis workspace
 
-After signing in, the workspace shows the conversation, the active result (a bar chart with its table, or a table), a summary of its scope, and analysis figures with the rows they are based on.
+After signing in, the workspace shows:
+
+- the conversation;
+- the active result as a chart with its table, or as a table;
+- a summary of its scope;
+- analysis figures with the rows they are based on.
+
+The views depend on the result: bar, horizontal bar, or table for customers and products; also a pie when product sales are grouped; line, bar, or table for sales over time. The rules are in the [design system](docs/design/DESIGN-SYSTEM.md#chart-rules-per-result-shape-task-005).
 
 - **How a question is handled:** a model reads the question and proposes one structured decision (refine, analyse, change the view, load data, confirm a switch, ask a question, or reply). The API checks that decision against the stored result and decides what actually happens. Every figure comes from the API, computed from the stored rows; the model never sees the rows or the figures.
-- **Switching data:** loading a different capability or period replaces the current result, so the workspace asks first (**Switch** or **Keep current**).
+- **Switching data:** loading a different capability or period, or for sales over time a different product filter or comparison, replaces the current result, so the workspace asks first (**Switch** or **Keep current**). Changing the interval, measure, grouping, or chart never loads data.
 - **One turn at a time:** while a question is being answered, a second message gets a "still answering" reply, and a refreshed page shows a notice until the answer arrives. Signing out never waits for a slow answer.
 
 **Model and data.** Two settings in `.env` choose them:
@@ -63,14 +70,22 @@ Production refuses `demo` and `fixture`. Docker Compose uses the development def
 
 **Using the real adapters** (each needs your own account; the keys stay outside this repository):
 
-- **BigQuery:** create a Google Cloud project with the BigQuery API enabled (the free Sandbox is enough), run `gcloud auth application-default login` (the credentials file stays in your user profile), and set `DATA_SOURCE=bigquery` and `GOOGLE_CLOUD_PROJECT=<project id>` in `.env`. Each question that loads data scans about 10 MB, well inside the Sandbox's free monthly allowance; every query is capped at 1 GB.
-- **Claude:** create an API key in the Anthropic Console, set a spend limit there (or keep prepaid credit with auto-reload off), and set `ANALYSIS_MODEL=claude` and `ANTHROPIC_API_KEY=<key>` in `.env`. A turn costs about $0.0025 and takes about 2 s (measured, see below).
+- **BigQuery:** create a Google Cloud project with the BigQuery API enabled (the free Sandbox is enough), run `gcloud auth application-default login` (the credentials file stays in your user profile), and set `DATA_SOURCE=bigquery` and `GOOGLE_CLOUD_PROJECT=<project id>` in `.env`. Each question that loads data scans about 10 MB (customers and products) or 8 MB (sales over time, including a comparison period), well inside the Sandbox's free monthly allowance; every query is capped at 1 GB.
+- **Claude:** create an API key in the Anthropic Console, set a spend limit there (or keep prepaid credit with auto-reload off), and set `ANALYSIS_MODEL=claude` and `ANTHROPIC_API_KEY=<key>` in `.env`. A turn costs about $0.003 and takes about 2 s (measured by the evaluation, see below).
 
 **Live checks** (never part of `npm test` or CI; each skips without its credentials):
 
 - `npm run live:profile -w api`: profiles TheLook (free). Results: [docs/product/THELOOK-PROFILE.md](docs/product/THELOOK-PROFILE.md).
-- `npm run live:test -w api`: known-answer check. The BigQuery queries must match the reference calculation rules exactly (free).
-- `npm run live:eval -w api`: 37 model decision cases, about $0.09 per run. Passes at 90% overall and 100% of the safety cases. `EVAL_SAVE_BASELINE=1` stores the result in `api/src/live/eval/`, the baseline for comparing models later (`ANTHROPIC_MODEL` selects another model).
+- `npm run live:test -w api`: known-answer check, about 25 queries (free in the Sandbox). The BigQuery queries must match the reference calculation rules exactly: customers, products with department and brand, and daily sales (unfiltered, for one category, and with a comparison period).
+- `npm run live:eval -w api`: 61 model decision cases, about $0.19 per run. Passes at 90% overall and 100% of the safety cases. `EVAL_SAVE_BASELINE=1` stores the result in `api/src/live/eval/`, the baseline for comparing models later (`ANTHROPIC_MODEL` selects another model). `EVAL_CASES=id1,id2` reruns only some cases.
+- Add `-- --silent=false` to see the output (hand-check material, measurements, and failures).
+
+**Known limitations:**
+
+- Sales over time can be filtered by category or department, not by brand or a single product.
+- A brand filter on product results needs the exact brand name, because brand names are not sent to the model.
+- “Top 10 brands by revenue” may be refused: the model sends a time-series measure for any number of brands, so grouping by brand always shows the top 20 ([TASK-005 DEC-003](docs/work/completed/TASK-005-sales-trends-and-groups/DECISION-LOG.md)).
+- Brands that differ only in letter case are kept separate, as in the source data.
 
 **Checks:** `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test` (API tests need the database running), and `npm run build`.
 

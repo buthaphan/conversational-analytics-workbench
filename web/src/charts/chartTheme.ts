@@ -37,4 +37,9 @@ export const chartTheme = {
   },
   categoryAxis: axis(),
   valueAxis: axis(),
+  // Series styling (no colors: those come from the palette). Lines carry hollow point markers;
+  // vertical bars have rounded tops; pie slices are separated by the surface color.
+  line: { symbol: "emptyCircle", symbolSize: 7, lineStyle: { width: 2.5 } },
+  bar: { barMaxWidth: 36, itemStyle: { borderRadius: [4, 4, 0, 0] } },
+  pie: { itemStyle: { borderColor: token("surface"), borderWidth: 2 } },
 };

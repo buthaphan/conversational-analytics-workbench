@@ -97,7 +97,14 @@ const STATUSES = ["success", "warning", "error", "info"];
 
 /** Every foreground/background combination the design system allows. */
 export const colorPairings: ColorPairing[] = [
-  ...each(["fg", "fg-secondary", "fg-muted", "primary", "accent"], SURFACES, "text"),
+  ...each(["fg", "fg-secondary", "fg-muted", "primary", "accent", "highlight"], SURFACES, "text"),
+  // Placeholder text: inputs are always on surface.
+  ...each(["fg-placeholder"], ["surface"], "text"),
+  // Icon tiles: teal on its tint, gold on its tint, blue on the info tint.
+  ...each(["accent", "fg"], ["accent-subtle"], "text"),
+  ...each(["highlight", "fg"], ["highlight-subtle"], "text"),
+  // Gold header text and icons, across the navy gradient.
+  ...each(["on-brand-accent"], ["brand-navy", "primary-hover"], "text"),
   // Alert body text sits on the subtle status backgrounds.
   ...each(
     ["fg"],

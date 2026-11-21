@@ -161,10 +161,11 @@ describe("scripted conversations (TASK-003 AC-17)", () => {
     expect(fetches).toHaveLength(1);
   });
 
-  it("6. 'Show it as a pie chart' is refused with bar and table offered", async () => {
+  it("6. 'Show it as a pie chart' is refused with the views that suit customers", async () => {
     const { reply, state } = await say("Show it as a pie chart");
+    // TASK-005 AC-9: a pie exists, but customer rows are not parts of a whole.
     expect(reply.text).toBe(
-      "Pie charts aren't available yet. I can show this as a bar chart or a table.",
+      "A pie chart doesn't suit this result: it shows parts of a whole, and this result lists individual customers. I can show it as a bar chart, a horizontal bar chart, or a table.",
     );
     expect(state.activeResult?.view.view).toBe("table");
   });

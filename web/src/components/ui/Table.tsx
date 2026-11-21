@@ -100,7 +100,10 @@ export function Table<Row>({
             </tr>
           ) : (
             rows.map((row) => (
-              <tr key={rowKey(row)} className="border-b border-border last:border-b-0">
+              <tr
+                key={rowKey(row)}
+                className="border-b border-border transition-colors last:border-b-0 hover:bg-surface-muted"
+              >
                 {columns.map((column) => {
                   const value = row[column.key];
                   const content = column.format ? column.format(value, row) : String(value ?? "");
