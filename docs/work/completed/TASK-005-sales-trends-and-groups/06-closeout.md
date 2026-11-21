@@ -1,6 +1,6 @@
 # Closeout: TASK-005 Sales trends and group performance
 
-**Status:** Awaiting the user's acceptance. External CI passed for `c4fc3db` (reported by the user, 2026-11-21).  
+**Status:** Accepted by the user on 2026-11-21. External CI passed for `c4fc3db` (reported by the user, 2026-11-21).  
 **Spec revision:** 3 (approved 2026-11-15)  
 **Branch:** `feature/TASK-005-sales-trends-and-groups`, pushed. Spec and plan `e026773`; implementation, walkthrough fixes, and review fixes `c4fc3db`.
 
@@ -34,7 +34,7 @@ Spec Definition of Done:
 - [x] Review findings are resolved or explicitly accepted by the user (SF-1, SF-4, and S-1 fixed; SF-2 as DEC-004; SF-3 as DEC-005; S-2 to S-5 deferred).
 - [x] Documentation, the profile, and known limitations are current.
 - [x] The user completed the manual walkthrough (AC-16).
-- [ ] The user accepts closeout; the external CI state is reported accurately (passed for `c4fc3db`).
+- [x] The user accepts closeout (2026-11-21); the external CI state is reported accurately (passed for `c4fc3db`).
 
 ## Verification and review
 
@@ -58,8 +58,8 @@ Spec Definition of Done:
 
 ## Limitations and pending decisions
 
-- **Pending decisions:**
-  - The development-only `minimatch` advisory: leave as is, or update the ESLint tooling in a later task (the suggested `npm audit fix --force` is a breaking downgrade).
+- **Pending decisions:** none for this task.
+  - The development-only `minimatch` advisory is not changed here (the suggested `npm audit fix --force` is a breaking downgrade). Whether to update the ESLint tooling is left for a later task.
 - **Known limitations:**
   - **DEC-003:** "top N brands" is refused; the model sends a time-series measure instead of a limit.
   - Sales over time filter by category or department only, not by brand or a single product (S9).
@@ -77,7 +77,7 @@ Spec Definition of Done:
 
 ## User acceptance
 
-- Accepted by: [pending]
-- Date: [pending]
+- Accepted by: buthaphan
+- Date: 2026-11-21
 - External CI result: Passed for `c4fc3db` (reported by the user, 2026-11-21)
-- Notes: [pending]
+- Notes: Accepted as complete with the known limitations above. Next: move the task folder to `docs/work/completed/`, commit, and merge the pull request into `main`. Then a README update for the GitHub profile link, on its own branch. No license for now (user's decision, 2026-11-21).

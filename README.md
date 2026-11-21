@@ -12,7 +12,7 @@ A portfolio showcase for exploring business data with natural-language questions
 - **TASK-001 (user accounts and sign-in):** complete. The NestJS API (`api/`), PostgreSQL, sign-in and sign-out with server-side sessions, and Docker Compose.
 - **TASK-003 (conversational workflow):** complete. The analysis workspace, the backend rules that decide what each question may do, and a development demo model, all without cloud credentials ([architecture proposal](docs/ideas/2026-11-08-conversational-analytics/ARCHITECTURE-PROPOSAL.md)).
 - **TASK-004 (real data and AI adapters):** complete. BigQuery (TheLook) and Claude Sonnet 5.5 behind the same workflow ([task records](docs/work/completed/TASK-004-data-and-ai-adapters/)).
-- **TASK-005 (sales trends and group performance):** in progress on its feature branch. Sales over time by day, week, or month (optionally for categories or a department, and compared with a second period); product sales grouped by category, department, or brand; line, horizontal bar, and pie charts ([task records](docs/work/active/TASK-005-sales-trends-and-groups/)).
+- **TASK-005 (sales trends and group performance):** complete. Sales over time by day, week, or month (optionally for categories or a department, and compared with a second period); product sales grouped by category, department, or brand; line, horizontal bar, and pie charts ([task records](docs/work/completed/TASK-005-sales-trends-and-groups/)).
 
 See `docs/PROJECT-SETUP.md` for decisions and open items, and `docs/work/` for task records.
 
@@ -84,7 +84,7 @@ Production refuses `demo` and `fixture`. Docker Compose uses the development def
 
 - Sales over time can be filtered by category or department, not by brand or a single product.
 - A brand filter on product results needs the exact brand name, because brand names are not sent to the model.
-- “Top 10 brands by revenue” may be refused: the model sends a time-series measure for any number of brands, so grouping by brand always shows the top 20 ([TASK-005 DEC-003](docs/work/active/TASK-005-sales-trends-and-groups/DECISION-LOG.md)).
+- “Top 10 brands by revenue” may be refused: the model sends a time-series measure for any number of brands, so grouping by brand always shows the top 20 ([TASK-005 DEC-003](docs/work/completed/TASK-005-sales-trends-and-groups/DECISION-LOG.md)).
 - Brands that differ only in letter case are kept separate, as in the source data.
 
 **Checks:** `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test` (API tests need the database running), and `npm run build`.
