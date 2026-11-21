@@ -55,7 +55,10 @@ describe("Input and FormField (AC-7)", () => {
     render(<FormField label="Email">{(field) => <Input {...field} />}</FormField>);
     const input = screen.getByLabelText("Email");
     expect(input.className).toMatch(/(^|\s)border-border-input(\s|$)/);
-    expect(input.className).toMatch(/focus-visible:outline-focus/);
+    // Focus darkens and thickens the border rather than drawing an outline ring around the field.
+    expect(input.className).toMatch(/focus-visible:border-fg-secondary/);
+    expect(input.className).toMatch(/focus-visible:ring-fg-secondary/);
+    expect(input.className).toMatch(/focus-visible:outline-none/);
   });
 
   it("switches to the error border when invalid", () => {

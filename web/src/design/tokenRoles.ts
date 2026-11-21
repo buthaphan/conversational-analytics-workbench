@@ -13,8 +13,14 @@ export const tokenRoles: Record<string, string> = {
 
   fg: "Primary text and headings",
   "fg-secondary": "Secondary text: descriptions, captions, table headers",
-  "fg-muted": "Lowest-emphasis text: placeholders, metadata, axis labels",
+  "fg-muted": "Lowest-emphasis text: metadata, axis labels",
+  "fg-placeholder":
+    "Placeholder text in inputs (on surface only; the faintest text that meets 4.5:1)",
   accent: "Teal-toned text and links (text-safe version of brand teal)",
+  "accent-subtle": "Teal-tinted background for icon tiles",
+  highlight: "Gold-toned text and icons on light surfaces (text-safe version of brand gold)",
+  "highlight-subtle": "Gold-tinted background for icon tiles",
+  "on-brand-accent": "Gold text and icons on the brand-navy header",
 
   border: "Decorative dividers and surface outlines",
   "border-input": "Borders that identify a control (inputs, secondary buttons); 3:1",

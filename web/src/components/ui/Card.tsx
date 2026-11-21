@@ -31,12 +31,12 @@ export function Card({
     <section
       aria-labelledby={title ? headingId : undefined}
       className={cn(
-        "flex flex-col rounded-lg border border-border bg-surface text-fg shadow-sm",
+        "flex flex-col rounded-xl border border-border bg-surface text-fg shadow-md",
         className,
       )}
     >
       {title && (
-        <header className={compact ? "px-4 pt-3" : "px-5 pt-5"}>
+        <header className={compact ? "px-5 pt-4" : "px-5 pt-5"}>
           <Heading id={headingId} className={headingSize}>
             {title}
           </Heading>
@@ -44,7 +44,7 @@ export function Card({
       )}
       <div
         className={cn(
-          compact ? "px-4 pt-2 pb-3" : "p-5",
+          compact ? "px-5 pt-2 pb-4" : "p-5",
           stretch && "flex min-h-0 flex-1 flex-col",
         )}
       >

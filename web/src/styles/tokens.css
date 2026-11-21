@@ -24,12 +24,19 @@
   --color-fg: #142433;
   --color-fg-secondary: #3b4f63;
   --color-fg-muted: #56677a;
+  --color-fg-placeholder: #687786;
   --color-accent: #0b7363;
+  --color-accent-subtle: #e3f3ef;
+  /* Gold companions: a text-safe amber for light surfaces, and a light gold for the navy header */
+  --color-highlight: #946200;
+  --color-highlight-subtle: #fbf1dc;
+  --color-on-brand-accent: #f2c66d;
 
   /* Borders and focus */
   --color-border: #d6dee6;
   --color-border-input: #7b8a99;
-  --color-focus: #0b7363;
+  /* Dark grey, matching the focused input border (fg-secondary) */
+  --color-focus: #3b4f63;
 
   /* Actions */
   --color-primary: #18324b;
@@ -113,6 +120,7 @@
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
   --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
   --radius-full: 9999px;
 
   /* Elevation (navy-tinted, subtle) */

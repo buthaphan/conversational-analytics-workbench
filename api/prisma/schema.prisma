@@ -94,6 +94,10 @@ model ResultSet {
   analysisSessionId String           @map("analysis_session_id") @db.Uuid
   capability        String
   scope             Json
+  /// Retrieval parameters of a time series: product filter and comparison (TASK-005 AC-6).
+  parameters        Json?
+  /// UTC date of the retrieval: a time series is cut off after it and its bucket is partial (S7).
+  asOf              DateTime?        @map("as_of") @db.Date
   rowCount          Int              @map("row_count")
   createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   analysisSession   AnalysisSession  @relation("SessionResults", fields: [analysisSessionId], references: [id], onDelete: Cascade)

@@ -77,6 +77,31 @@ describe("demo model (TASK-003 AC-15, DEC-001)", () => {
       type: "refine",
       refinement: { filters: [{ field: "category", op: "in", values: ["Jeans"] }] },
     });
+    // TASK-005 AC-12: a monthly series, a weekly view, a comparison, grouping, and a pie.
+    expect(await decide("Show monthly sales for 2025")).toEqual({
+      type: "request_data",
+      capability: "sales_time_series",
+      scope: { start_date: "2025-01-01", end_date: "2026-01-01" },
+      refinement: { interval: "month" },
+    });
+    expect(await decide("Show it by week")).toEqual({
+      type: "refine",
+      refinement: { interval: "week" },
+    });
+    expect(await decide("Compare with the previous year")).toEqual({
+      type: "request_data",
+      capability: "sales_time_series",
+      parameters: { comparison: { baseline: "previous_year" } },
+    });
+    expect(await decide("Which category performed best?")).toEqual({
+      type: "refine",
+      refinement: { group_by: "category", sort: { field: "revenue", direction: "desc" } },
+    });
+    // TASK-005 AC-8: grouping is a view setting, not an analysis.
+    expect(await decide("Revenue by category")).toEqual({
+      type: "refine",
+      refinement: { group_by: "category" },
+    });
     expect(await decide("What's the weather today?")).toMatchObject({
       type: "reply",
       reason: "unrelated",

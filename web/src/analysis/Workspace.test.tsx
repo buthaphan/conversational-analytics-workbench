@@ -71,7 +71,9 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
     mockFetch(stateRoute(empty, examples));
     const { container } = render(<Workspace onSessionEnded={() => {}} />);
     expect(
-      await screen.findByText(/ask a question about customer spending or product sales/i),
+      await screen.findByText(
+        /ask a question about customer spending, product sales, or sales over time/i,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText("Demo mode")).toBeInTheDocument();
     for (const example of examples)
@@ -127,17 +129,86 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
     expect(within(table).getByRole("cell", { name: "3" })).toBeInTheDocument();
   });
 
-  it("fills the window height on wide screens, letting the chart take the spare room (TASK-004 DEC-004)", async () => {
+  it("fills exactly the window height on wide screens, letting the chart take the spare room (TASK-004 DEC-004, TASK-005)", async () => {
     mockFetch(stateRoute(loaded));
     render(<Workspace onSessionEnded={() => {}} />);
     const chart = await screen.findByRole("img", { name: /chart\. Exact values/ });
-    // The two-column grid is at least as tall as the window below the header.
+    // The two-column grid is exactly as tall as the window below the header, so a long result or
+    // conversation never makes the page itself scroll (walkthrough feedback, TASK-005).
     const grid = chart.closest("[data-testid='workspace-grid']") as HTMLElement;
-    expect(grid.className).toMatch(/lg:min-h-\[[^\]]*100vh/);
-    // The result card and the chart stretch; the chart keeps a minimum height.
+    expect(grid.className).toMatch(/(^|\s)lg:h-\[calc\(100vh_-_9\.5rem\)\](\s|$)/);
+    expect(grid.className).not.toMatch(/lg:min-h-\[/);
+    // The result column, its card, and the figure may shrink; the chart keeps a minimum height.
+    const column = grid.firstElementChild as HTMLElement;
+    expect(column.className).toMatch(/(^|\s)lg:min-h-0(\s|$)/);
     expect(chart.className).toMatch(/(^|\s)lg:flex-1(\s|$)/);
     expect(chart.className).toMatch(/(^|\s)min-h-56(\s|$)/);
-    expect(chart.closest("section")?.className).toMatch(/(^|\s)lg:flex-1(\s|$)/);
+    const card = chart.closest("section") as HTMLElement;
+    expect(card.className).toMatch(/(^|\s)lg:flex-1(\s|$)/);
+    expect(card.className).toMatch(/(^|\s)lg:min-h-0(\s|$)/);
+    expect(chart.closest("figure")?.className).toMatch(/(^|\s)lg:min-h-0(\s|$)/);
+    // The scope summary keeps its height.
+    const summary = screen.getByRole("region", { name: "Customer spending" });
+    expect(summary.className).toMatch(/(^|\s)shrink-0(\s|$)/);
+  });
+
+  it("keeps a compared series' period totals whole and lets its bucket table scroll (TASK-005)", async () => {
+    const bucket = (label: string, firstDay: string, lastDay: string) => ({
+      label,
+      firstDay,
+      lastDay,
+      partial: false,
+      revenue: 10,
+      order_count: 1,
+      item_count: 1,
+    });
+    const totals = { revenue: 10, order_count: 1, item_count: 1 };
+    const zero = { amount: 0, percent: 0 };
+    mockFetch(
+      stateRoute({
+        ...loaded,
+        activeResult: {
+          ...result,
+          capability: "sales_time_series",
+          title: "Sales over time",
+          rowNoun: ["day", "days"],
+          fields: [
+            { name: "date", label: "Date", kind: "label" },
+            { name: "revenue", label: "Revenue", kind: "money" },
+            { name: "order_count", label: "Orders", kind: "integer" },
+            { name: "item_count", label: "Items sold", kind: "integer" },
+          ],
+          rows: [],
+          view: {
+            ...result.view,
+            filters: [],
+            view: "line",
+            interval: "month",
+            measure: "revenue",
+          },
+          parameters: { comparison: { baseline: "previous_year" } },
+          comparisonScope: { start_date: "2024-01-01", end_date: "2025-01-01" },
+          series: {
+            interval: "month",
+            measure: "revenue",
+            main: [bucket("Jan 2025", "2025-01-01", "2025-01-31")],
+            comparison: [bucket("Jan 2024", "2024-01-01", "2024-01-31")],
+            lengthsDiffer: false,
+            totals: {
+              main: totals,
+              comparison: totals,
+              change: { revenue: zero, order_count: zero, item_count: zero },
+            },
+          },
+        },
+      }),
+    );
+    render(<Workspace onSessionEnded={() => {}} />);
+    const buckets = await screen.findByRole("region", { name: "Revenue by month" });
+    expect(buckets.className).toMatch(/(^|\s)lg:min-h-0(\s|$)/);
+    expect(buckets.className).toMatch(/(^|\s)overflow-y-auto(\s|$)/);
+    const periodTotals = screen.getByRole("region", { name: "Period totals" });
+    expect(periodTotals.className).toMatch(/(^|\s)shrink-0(\s|$)/);
   });
 
   it("keeps a minimum conversation height when it follows the result column (review S1)", async () => {
@@ -176,8 +247,11 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
     });
     expect(chartTable).toHaveAttribute("tabindex", "0");
     expect(chartTable.className).toMatch(/(^|\s)overflow-y-auto(\s|$)/);
-    // On wide screens the table takes the height left in the window, so the page does not scroll.
-    expect(chartTable.className).toMatch(/lg:max-h-\[[^\]]*100vh/);
+    // On wide screens the table takes the height left in the bounded column and scrolls inside it,
+    // so the page does not scroll; no fixed sum of the other parts' heights (TASK-005).
+    expect(chartTable.className).toMatch(/(^|\s)lg:min-h-0(\s|$)/);
+    expect(chartTable.className).toMatch(/(^|\s)lg:max-h-none(\s|$)/);
+    expect(chartTable.className).not.toMatch(/100vh/);
     // The chart title above already names it, so the table caption is only for screen readers.
     expect(
       within(chartTable).getByText("Total spend by customer (highest first)").className,
@@ -197,7 +271,8 @@ describe("analysis workspace (TASK-003 AC-16, AC-15, AC-13)", () => {
     });
     expect(table).toHaveAttribute("tabindex", "0");
     expect(table.className).toMatch(/(^|\s)overflow-y-auto(\s|$)/);
-    expect(table.className).toMatch(/lg:max-h-\[[^\]]*100vh/);
+    expect(table.className).toMatch(/(^|\s)lg:min-h-0(\s|$)/);
+    expect(table.className).not.toMatch(/100vh/);
   });
 
   it("sends a message, announces the reply politely, and keeps focus in the input", async () => {

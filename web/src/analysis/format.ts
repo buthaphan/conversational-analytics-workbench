@@ -31,6 +31,54 @@ export function formatDateRange(scope: Scope): string {
     : `${formatDate(start)} – ${formatDate(last)}`;
 }
 
+const parts = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return { day: d.getUTCDate(), month: d.getUTCMonth(), year: d.getUTCFullYear() };
+};
+
+/**
+ * Days, first and last inclusive, without repeating the shared month or year, so series tables stay
+ * narrow (TASK-005 S6, walkthrough W3): "6 Jan 2025", "1–31 Jan 2024", "27 Jan – 2 Feb 2025",
+ * "30 Dec 2024 – 5 Jan 2025".
+ */
+export function formatDays(first: string, last: string): string {
+  const a = parts(first);
+  const b = parts(last);
+  const month = (p: { month: number }) => MONTHS[p.month];
+  if (first === last) return `${a.day} ${month(a)} ${a.year}`;
+  if (a.year !== b.year) return `${a.day} ${month(a)} ${a.year} – ${b.day} ${month(b)} ${b.year}`;
+  if (a.month !== b.month) return `${a.day} ${month(a)} – ${b.day} ${month(b)} ${b.year}`;
+  return `${a.day}–${b.day} ${month(b)} ${b.year}`;
+}
+
+/**
+ * A period's short name for legends and table headers (walkthrough W3): whole calendar years
+ * ("2025", "2023 – 2024"), whole months ("Mar 2025", "Jan – Feb 2025", "Nov 2024 – Feb 2025"),
+ * otherwise its days.
+ */
+export function formatPeriod(scope: Scope): string {
+  const lastDay = new Date(Date.parse(`${scope.end_date}T00:00:00Z`) - DAY)
+    .toISOString()
+    .slice(0, 10);
+  const a = parts(scope.start_date);
+  const end = parts(scope.end_date);
+  const b = parts(lastDay);
+  if (a.day !== 1 || end.day !== 1) return formatDays(scope.start_date, lastDay);
+  if (a.month === 0 && end.month === 0)
+    return a.year === b.year ? `${a.year}` : `${a.year} – ${b.year}`;
+  if (a.year === b.year && a.month === b.month) return `${MONTHS[a.month]} ${a.year}`;
+  return a.year === b.year
+    ? `${MONTHS[a.month]} – ${MONTHS[b.month]} ${b.year}`
+    : `${MONTHS[a.month]} ${a.year} – ${MONTHS[b.month]} ${b.year}`;
+}
+
+/** A change with its sign: "+$50.00", "−2" (a true minus sign), or no sign for zero. */
+export function signed(value: number, format: (v: number) => string): string {
+  if (value > 0) return `+${format(value)}`;
+  if (value < 0) return `−${format(-value)}`;
+  return format(0);
+}
+
 /** Formats a cell by its field kind: money as currency, integers with separators, text unchanged. */
 export function formatCell(
   field: FieldInfo | undefined,

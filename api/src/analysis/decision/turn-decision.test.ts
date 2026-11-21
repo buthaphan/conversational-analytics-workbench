@@ -42,6 +42,107 @@ describe("TurnDecision (AC-3, TD-1)", () => {
     expect(parseTurnDecision(decision).ok).toBe(true);
   });
 
+  describe("TASK-005 additions (AC-3, AC-12, DEC-002)", () => {
+    const series = (extra: object) => ({
+      relevance: "other_capability",
+      need: "new_data",
+      action: {
+        type: "request_data",
+        capability: "sales_time_series",
+        scope: { start_date: "2025-01-01", end_date: "2026-01-01" },
+        ...extra,
+      },
+    });
+
+    it.each([
+      ["no parameters", {}],
+      [
+        "a product filter, a comparison, and the view settings",
+        {
+          parameters: {
+            product_filter: { field: "category", values: ["Jeans", "Sweaters"] },
+            comparison: { baseline: "previous_year" },
+          },
+          refinement: { interval: "week", measure: "order_count" },
+        },
+      ],
+      ["the previous period", { parameters: { comparison: { baseline: "previous_period" } } }],
+      [
+        "a custom comparison",
+        {
+          parameters: {
+            comparison: { baseline: "custom", start_date: "2024-01-01", end_date: "2025-01-01" },
+          },
+        },
+      ],
+      [
+        "a department filter",
+        { parameters: { product_filter: { field: "department", values: ["Men"] } } },
+      ],
+    ])("accepts a time-series request with %s", (_, extra) => {
+      expect(parseTurnDecision(series(extra)).ok).toBe(true);
+    });
+
+    it.each(["category", "department", "brand", "none"])("accepts group_by %s", (group_by) => {
+      expect(
+        parseTurnDecision({
+          ...base,
+          action: { type: "refine", refinement: { group_by, limit: 30 } },
+        }).ok,
+      ).toBe(true);
+    });
+
+    it.each([
+      ["a custom comparison without dates", { parameters: { comparison: { baseline: "custom" } } }],
+      [
+        "a previous-period comparison with dates",
+        {
+          parameters: {
+            comparison: {
+              baseline: "previous_period",
+              start_date: "2024-01-01",
+              end_date: "2025-01-01",
+            },
+          },
+        },
+      ],
+      ["an unknown baseline", { parameters: { comparison: { baseline: "last_quarter" } } }],
+      [
+        "a brand filter",
+        { parameters: { product_filter: { field: "brand", values: ["Northline"] } } },
+      ],
+      ["an empty filter", { parameters: { product_filter: { field: "category", values: [] } } }],
+      [
+        "more than 10 filter values",
+        { parameters: { product_filter: { field: "category", values: Array(11).fill("Jeans") } } },
+      ],
+      ["an unknown interval", { refinement: { interval: "quarter" } }],
+      // Walkthrough W2: the model packed two settings into one string.
+      ["a malformed measure", { refinement: { measure: "order_count','interval':'week" } }],
+      ["an unknown measure", { refinement: { measure: "profit" } }],
+      ["a measure label instead of its name", { refinement: { measure: "Orders" } }],
+      ["an extra parameter", { parameters: { sql: "select 1" } }],
+    ])("rejects a time-series request with %s", (_, extra) => {
+      expect(parseTurnDecision(series(extra)).ok).toBe(false);
+    });
+
+    it("offers the model exactly the three measures in its output schema (walkthrough W2)", () => {
+      const schema = JSON.stringify(TURN_DECISION_JSON_SCHEMA);
+      expect(schema).toContain(
+        '"measure":{"type":"string","enum":["revenue","order_count","item_count"]}',
+      );
+    });
+
+    it("rejects an unknown group_by", () => {
+      expect(
+        parseTurnDecision({
+          ...base,
+          action: { type: "refine", refinement: { group_by: "color" } },
+        }).ok,
+      ).toBe(false);
+    });
+  });
+
   it("defaults the analysis target to the complete result set", () => {
     const result = parseTurnDecision({
       ...base,
@@ -98,6 +199,24 @@ describe("TurnDecision (AC-3, TD-1)", () => {
       {
         ...base,
         action: { type: "analyze", analysis: { operation: "concentration", measure: "revenue" } },
+      },
+    ],
+    // TASK-005 AC-8: grouping is the refinement's group_by; the group analysis is removed.
+    [
+      "the removed group analysis",
+      {
+        ...base,
+        action: { type: "analyze", analysis: { operation: "group", group_by: "category" } },
+      },
+    ],
+    [
+      "group_by on a summary",
+      {
+        ...base,
+        action: {
+          type: "analyze",
+          analysis: { operation: "summary", field: "revenue", group_by: "category" },
+        },
       },
     ],
     ["empty clarification", { ...base, action: { type: "clarify", question: "" } }],

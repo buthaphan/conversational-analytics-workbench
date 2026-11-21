@@ -26,7 +26,9 @@ const context: ModelContext = {
       clarifyWhen: "Ask what 'best' means.",
       scope: "start_date inclusive, end_date exclusive.",
       fields: [{ name: "total_spend", kind: "money", description: "Sum of completed items." }],
-      analyses: { summary: ["total_spend"], concentration: ["total_spend"], groupBy: [] },
+      analyses: { summary: ["total_spend"], concentration: ["total_spend"] },
+      grouping: [],
+      views: { rows: ["bar", "horizontal_bar", "table"] },
     },
   ],
   activeResult: {
@@ -42,6 +44,7 @@ const context: ModelContext = {
     },
   },
   allowedValues: {},
+  valueCounts: {},
   recentTurns: [{ role: "user", text: "Who spent the most?" }],
   pending: null,
 };

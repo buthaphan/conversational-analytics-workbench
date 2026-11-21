@@ -59,7 +59,10 @@ describe("signed-in shell and session end (AC-14)", () => {
     const logo = within(heading).getByRole("img", { name: "Conversational Analytics Workbench" });
     expect(logo.getAttribute("src")).toBe(logoOnDark);
     expect(screen.queryByText("Conversational Analytics Workbench")).toBeNull();
-    expect(screen.getByText("user@example.test").className).toMatch(/(^|\s)text-on-primary(\s|$)/);
+    // The email is in the header's light gold (tested pairing on both ends of the navy gradient).
+    expect(screen.getByText("user@example.test").className).toMatch(
+      /(^|\s)text-on-brand-accent(\s|$)/,
+    );
     // The default teal focus ring is too faint on navy.
     expect(signOut.className).toMatch(/focus-visible:outline-on-primary/);
   });

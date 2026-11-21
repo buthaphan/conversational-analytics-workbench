@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import type { CapabilityId, Scope } from "../capabilities/registry";
-import { DataSource, type ResultRowData } from "./data-source";
+import type { EntityCapabilityId, Scope } from "../capabilities/registry";
+import { DataSource, type ResultRowData, UNKNOWN_BRAND } from "./data-source";
 import { fromCents, toCents } from "./money";
+import type { DailySalesRequest, DailySalesRow } from "./time-series";
 
 /**
  * Deterministic stand-in for TheLook (TASK-003 TD-12). Its aggregation is the reference semantics
@@ -13,7 +14,14 @@ export type ItemStatus = "Complete" | "Returned" | "Cancelled" | "Processing";
 
 export interface Fixture {
   customers: { id: string; name: string }[];
-  products: { id: string; name: string; category: string }[];
+  /** `brand` is null for a product without one, as in TheLook (TASK-005 AC-2). */
+  products: {
+    id: string;
+    name: string;
+    category: string;
+    department: string;
+    brand: string | null;
+  }[];
   items: {
     orderId: string;
     customerId: string;
@@ -109,6 +117,40 @@ function random(seed: number): () => number {
   };
 }
 
+/** Invented brand names; more than the brand cap (20), so grouping shows an "Other" row. */
+const BRANDS = [
+  "Alder Row",
+  "Bramblecrest",
+  "Cobalt Lane",
+  "Dunmore Knit",
+  "Emberfield",
+  "Fernhollow",
+  "Glenbrae",
+  "Harrowgate Supply",
+  "Inkstone",
+  "Juniper Moss",
+  "Kestrel Point",
+  "Larkspur Lane",
+  "Meridian Loom",
+  "Northline",
+  "Oakhurst Mill",
+  "Pinecrest Goods",
+  "Quarrystone",
+  "Riverbend Co",
+  "Saltmarsh",
+  "Thistlewood",
+  "Umberline",
+  "Valewind",
+  "Westbrook Field",
+  "Yarrowdale",
+  "Zephyr Loom",
+  "Ashgrove Studio",
+  "Birchway",
+  "Copperhollow",
+  "Driftmoor",
+  "Elmstead Works",
+];
+
 const START = Date.UTC(2024, 0, 1);
 const END = Date.UTC(2026, 10, 8); // exclusive: 2026-11-08
 const DAY = 24 * 60 * 60 * 1000;
@@ -128,6 +170,10 @@ export function generateFixture(seed = 20261108): Fixture {
       id: `P${pad(i + 1, 4)}`,
       name: `${pick(STYLES)} ${category.split(" ")[0]} ${pad(i + 1, 3)}`,
       category,
+      // Department and brand don't draw from the random sequence, so the TASK-003 and TASK-004
+      // fixture data (names, prices, orders) stays exactly as it was.
+      department: Math.floor(i / CATEGORIES.length) % 2 === 0 ? "Men" : "Women",
+      brand: i % 40 === 7 ? null : (BRANDS[(i * 7) % BRANDS.length] as string),
     };
   });
   const prices = new Map(products.map((p) => [p.id, Math.round((8 + rand() * 140) * 100) / 100]));
@@ -173,13 +219,43 @@ export class FixtureDataSource extends DataSource {
     super();
   }
 
-  async fetch(capability: CapabilityId, scope: Scope): Promise<ResultRowData[]> {
+  async fetch(capability: EntityCapabilityId, scope: Scope): Promise<ResultRowData[]> {
     const items = this.fixture.items.filter(
       (i) => i.status === "Complete" && i.date >= scope.start_date && i.date < scope.end_date,
     );
     return capability === "customer_spending"
       ? this.customerSpending(items)
       : this.productSales(items);
+  }
+
+  /** Per period and day: revenue summed in cents, distinct orders, items (TASK-005 AC-4). */
+  async fetchDailySales(request: DailySalesRequest): Promise<DailySalesRow[]> {
+    const filter = request.productFilter;
+    const productOk = new Map(
+      this.fixture.products.map((p) => [p.id, !filter || filter.values.includes(p[filter.field])]),
+    );
+    const rows: DailySalesRow[] = [];
+    for (const { period, scope } of request.periods) {
+      const byDay = new Map<string, { cents: number; orders: Set<string>; count: number }>();
+      for (const item of this.fixture.items) {
+        if (item.status !== "Complete" || item.date < scope.start_date) continue;
+        if (item.date >= scope.end_date || !productOk.get(item.productId)) continue;
+        const entry = byDay.get(item.date) ?? { cents: 0, orders: new Set<string>(), count: 0 };
+        entry.cents += toCents(item.salePrice);
+        entry.orders.add(item.orderId);
+        entry.count += 1;
+        byDay.set(item.date, entry);
+      }
+      for (const [date, { cents, orders, count }] of byDay)
+        rows.push({
+          period,
+          date,
+          revenue: fromCents(cents),
+          order_count: orders.size,
+          item_count: count,
+        });
+    }
+    return rows;
   }
 
   private customerSpending(items: Fixture["items"]): ResultRowData[] {
@@ -220,6 +296,8 @@ export class FixtureDataSource extends DataSource {
           product_id: p.id,
           product_name: p.name,
           category: p.category,
+          department: p.department,
+          brand: p.brand ?? UNKNOWN_BRAND,
           revenue: fromCents(cents),
           item_count: count,
         };

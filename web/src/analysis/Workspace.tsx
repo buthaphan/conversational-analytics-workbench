@@ -3,6 +3,7 @@ import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { FormField } from "../components/ui/FormField";
+import { Icon, IconTile } from "../components/ui/Icon";
 import { Input } from "../components/ui/Input";
 import { Spinner } from "../components/ui/Spinner";
 import { cn } from "../lib/cn";
@@ -254,18 +255,18 @@ export function Workspace({
       )}
 
       {/*
-        On wide screens the grid is at least as tall as the window below the header (header and
-        page padding: 9.5rem), so the result card and the conversation reach the bottom of the
-        window (TASK-004 DEC-004). Not in demo mode, where the banner sits above the grid.
+        On wide screens the grid is exactly as tall as the window below the header (header and page
+        padding: 9.5rem), so the result card and the conversation reach the bottom of the window
+        and neither a long result nor a long conversation makes the page scroll (TASK-004 DEC-004;
+        TASK-005 walkthrough). The result column hands its height out with flexbox: the chart keeps a
+        minimum, and tables scroll inside their own regions. In demo mode the banner sits above, so
+        the page scrolls by the banner's height only.
       */}
       <div
         data-testid="workspace-grid"
-        className={cn(
-          "grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
-          !load.demoExamples && "lg:min-h-[calc(100vh_-_9.5rem)]",
-        )}
+        className="grid gap-6 lg:h-[calc(100vh_-_9.5rem)] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
       >
-        <div className="flex min-w-0 flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6 lg:min-h-0">
           {activeResult ? (
             <>
               <ScopeSummary result={activeResult} />
@@ -273,10 +274,13 @@ export function Workspace({
             </>
           ) : (
             <Card title="No data yet" headingLevel={2}>
-              <p className="text-body text-fg-secondary">
-                Ask a question about customer spending or product sales to start. I&apos;ll confirm
-                the period before loading data.
-              </p>
+              <div className="flex items-start gap-4">
+                <IconTile name="barChart" tone="teal" className="size-12" />
+                <p className="text-body text-fg-secondary">
+                  Ask a question about customer spending, product sales, or sales over time to
+                  start. I&apos;ll confirm the period before loading data.
+                </p>
+              </div>
             </Card>
           )}
         </div>
@@ -291,13 +295,17 @@ export function Workspace({
           <section
             aria-labelledby="conversation-heading"
             className={cn(
-              "flex min-w-0 flex-col gap-4",
+              // A card: title bar, the scrolling history, then the controls and the input.
+              "flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-md",
               fill ? "lg:absolute lg:inset-0" : "lg:sticky lg:top-6",
             )}
           >
-            <h2 id="conversation-heading" className="text-h2 text-fg">
-              Conversation
-            </h2>
+            <div className="flex items-center gap-2.5 border-b border-border px-5 py-4">
+              <Icon name="chat" className="size-6 text-accent" />
+              <h2 id="conversation-heading" className="text-h3 text-fg">
+                Conversation
+              </h2>
+            </div>
             {messages.length > 0 && (
               // A fixed-height panel that scrolls on its own, so the page (and the result) does not
               // move as the conversation grows. Focusable so keyboard users can scroll it.
@@ -307,10 +315,11 @@ export function Workspace({
                 aria-label="Conversation history"
                 tabIndex={0}
                 className={cn(
-                  // The bordered frame is the scroll container, so its edge stays put (TASK-004 DEC-004).
-                  "max-h-[50vh] overflow-y-auto rounded-lg border border-border bg-surface p-2",
+                  // The framed region is the scroll container, so its edge stays put (TASK-004
+                  // DEC-004); the card supplies the sides, so only the bottom edge is drawn.
+                  "max-h-[50vh] overflow-y-auto border border-x-0 border-t-0 border-border bg-canvas p-3",
                   fill ? "lg:max-h-none lg:min-h-0 lg:flex-1" : "lg:max-h-[calc(100vh-20rem)]",
-                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+                  "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus",
                 )}
               >
                 <ol aria-label="Conversation" className="flex flex-col gap-3">
@@ -318,88 +327,107 @@ export function Workspace({
                     <li
                       key={m.seq}
                       className={cn(
-                        "flex flex-col gap-2 rounded-lg border p-3 text-body-sm",
+                        "flex gap-3 rounded-lg border p-3 text-body-sm shadow-sm",
                         m.role === "user"
-                          ? "border-border bg-surface-muted"
+                          ? "border-info-border bg-info-subtle"
                           : "border-border bg-surface",
                       )}
                     >
-                      <span className="text-label text-fg-secondary">
-                        {m.role === "user" ? "You" : "Assistant"}
-                      </span>
-                      <p className="text-fg">{m.text}</p>
-                      {m.card && <AnalysisCardView card={m.card} />}
+                      <Icon
+                        name={m.role === "user" ? "user" : "sparkle"}
+                        // The assistant's sparkle is gold; your own icon matches your blue message.
+                        className={cn(
+                          "mt-0.5 size-5",
+                          m.role === "user" ? "text-info" : "text-highlight",
+                        )}
+                      />
+                      <div className="flex min-w-0 flex-1 flex-col gap-2">
+                        <span className="text-label font-semibold text-fg">
+                          {m.role === "user" ? "You" : "Assistant"}
+                        </span>
+                        <p className="text-fg">{m.text}</p>
+                        {m.card && <AnalysisCardView card={m.card} />}
+                      </div>
                     </li>
                   ))}
                 </ol>
               </div>
             )}
 
-            {pending?.type === "switch" && (
-              <div
-                role="group"
-                aria-label="Switch dataset?"
-                className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4"
-              >
-                <p className="text-body-sm text-fg">
-                  Switch to {pending.capability.replaceAll("_", " ")} for{" "}
-                  {formatDateRange(pending.scope)}? Your current result will be replaced.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    loading={busy || waiting}
-                    onClick={() => void run(() => chooseSwitch("switch"))}
-                  >
-                    Switch
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    loading={busy || waiting}
-                    onClick={() => void run(() => chooseSwitch("keep"))}
-                  >
-                    Keep current
+            <div className="flex flex-col gap-3 p-4">
+              {pending?.type === "switch" && (
+                <div
+                  role="group"
+                  aria-label="Switch dataset?"
+                  className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4"
+                >
+                  <p className="text-body-sm text-fg">
+                    Switch to {pending.capability.replaceAll("_", " ")} for{" "}
+                    {formatDateRange(pending.scope)}? Your current result will be replaced.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      loading={busy || waiting}
+                      onClick={() => void run(() => chooseSwitch("switch"))}
+                    >
+                      Switch
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      loading={busy || waiting}
+                      onClick={() => void run(() => chooseSwitch("keep"))}
+                    >
+                      Keep current
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {waiting && <Alert variant="info">{STILL_ANSWERING}</Alert>}
+              {dropped && <Alert variant="warning">{TURN_DROPPED}</Alert>}
+              {stalled && (
+                <div className="flex flex-col items-start gap-3">
+                  <Alert variant="warning">
+                    This is taking longer than expected. Try again in a moment.
+                  </Alert>
+                  <Button variant="secondary" onClick={retryAfterStall}>
+                    Try again
                   </Button>
                 </div>
-              </div>
-            )}
+              )}
+              {state.notice && <Alert variant="warning">{state.notice}</Alert>}
+              {sendFailed && <Alert variant="error">Could not send your message. Try again.</Alert>}
 
-            {waiting && <Alert variant="info">{STILL_ANSWERING}</Alert>}
-            {dropped && <Alert variant="warning">{TURN_DROPPED}</Alert>}
-            {stalled && (
-              <div className="flex flex-col items-start gap-3">
-                <Alert variant="warning">
-                  This is taking longer than expected. Try again in a moment.
-                </Alert>
-                <Button variant="secondary" onClick={retryAfterStall}>
-                  Try again
+              <form onSubmit={submit} className="flex items-end gap-2">
+                <FormField label="Ask a question" hideLabel className="min-w-0 flex-1">
+                  {(control) => (
+                    <Input
+                      {...control}
+                      ref={inputRef}
+                      value={text}
+                      maxLength={MAX_LENGTH}
+                      autoComplete="off"
+                      placeholder="Ask a question about your data…"
+                      className="h-11 rounded-lg"
+                      onChange={(event) => setText(event.target.value)}
+                      // While busy, the Send button cancels its own activation, so Enter would not
+                      // submit; say why instead of dropping the message silently (review N1).
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && (busy || waiting)) announce(WAIT_MESSAGE);
+                      }}
+                    />
+                  )}
+                </FormField>
+                <Button
+                  type="submit"
+                  loading={busy || waiting}
+                  className="size-11 shrink-0 rounded-lg px-0"
+                >
+                  {!(busy || waiting) && <Icon name="send" className="size-5" />}
+                  <span className="sr-only">Send</span>
                 </Button>
-              </div>
-            )}
-            {state.notice && <Alert variant="warning">{state.notice}</Alert>}
-            {sendFailed && <Alert variant="error">Could not send your message. Try again.</Alert>}
-
-            <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <FormField label="Ask a question" className="flex-1">
-                {(control) => (
-                  <Input
-                    {...control}
-                    ref={inputRef}
-                    value={text}
-                    maxLength={MAX_LENGTH}
-                    autoComplete="off"
-                    onChange={(event) => setText(event.target.value)}
-                    // While busy, the Send button cancels its own activation, so Enter would not
-                    // submit; say why instead of dropping the message silently (review N1).
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" && (busy || waiting)) announce(WAIT_MESSAGE);
-                    }}
-                  />
-                )}
-              </FormField>
-              <Button type="submit" loading={busy || waiting}>
-                Send
-              </Button>
-            </form>
+              </form>
+            </div>
 
             {/* New assistant replies are announced politely; the log itself is not a live region. */}
             <div data-testid="reply-announcer" aria-live="polite" className="sr-only">

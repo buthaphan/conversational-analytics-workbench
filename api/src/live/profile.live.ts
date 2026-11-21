@@ -6,8 +6,9 @@ import {
 } from "../analysis/data/bigquery-data-source";
 
 /**
- * TheLook profile (TASK-004 AC-5). Read-only queries against the public dataset; results are
- * printed and summarised by hand in docs/product/THELOOK-PROFILE.md. Run: npm run live:profile -w api
+ * TheLook profile (TASK-004 AC-5, TASK-005 AC-1). Read-only queries against the public dataset;
+ * results are printed and summarised by hand in docs/product/THELOOK-PROFILE.md.
+ * Run: npm run live:profile -w api (only the TASK-005 queries: add `-- -t task005`)
  */
 const projectId = process.env.GOOGLE_CLOUD_PROJECT?.trim();
 const GB = 1024 ** 3;
@@ -99,6 +100,102 @@ const QUERIES: Record<string, string> = {
     FROM scopes s JOIN \`${D}.order_items\` oi
       ON oi.status = 'Complete' AND DATE(oi.created_at) >= s.start_date AND DATE(oi.created_at) < s.end_date
     GROUP BY s.label ORDER BY s.label`,
+
+  // ---- TASK-005 AC-1: department, brand, and daily sales. Same rules as the capability queries:
+  // Complete items only, window on the order's UTC date. Run only these: `-t task005`.
+  task005_departments: `
+    SELECT department, COUNT(*) AS products, COUNT(DISTINCT category) AS categories
+    FROM \`${D}.products\` GROUP BY department ORDER BY department`,
+  task005_categories_per_department: `
+    SELECT category, STRING_AGG(DISTINCT department ORDER BY department) AS departments
+    FROM \`${D}.products\` GROUP BY category ORDER BY category`,
+  task005_brand_values: `
+    SELECT
+      COUNT(DISTINCT brand) AS brands,
+      COUNTIF(brand IS NULL) AS null_brand,
+      COUNTIF(brand IS NOT NULL AND TRIM(brand) = '') AS blank_brand,
+      COUNTIF(brand IS NOT NULL AND brand != TRIM(brand)) AS untrimmed_brand,
+      MAX(LENGTH(brand)) AS longest_brand,
+      COUNTIF(department IS NULL) AS null_department,
+      (SELECT COUNT(*) FROM (
+        SELECT LOWER(TRIM(brand)) FROM \`${D}.products\` WHERE brand IS NOT NULL
+        GROUP BY 1 HAVING COUNT(DISTINCT brand) > 1)) AS brands_differing_only_by_case_or_space
+    FROM \`${D}.products\``,
+  task005_products_per_brand: `
+    SELECT APPROX_QUANTILES(n, 10) AS products_per_brand_deciles, MAX(n) AS max_products
+    FROM (SELECT brand, COUNT(*) AS n FROM \`${D}.products\` GROUP BY brand)`,
+  task005_brand_revenue_spread: `
+    WITH sales AS (
+      SELECT s.label, p.brand, SUM(CAST(ROUND(oi.sale_price * 100) AS INT64)) AS cents
+      FROM UNNEST([
+        STRUCT('last 1 year' AS label, DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR) AS start_date),
+        STRUCT('last 5 years', DATE_SUB(CURRENT_DATE(), INTERVAL 5 YEAR))
+      ]) s
+      JOIN \`${D}.orders\` o ON DATE(o.created_at) >= s.start_date AND DATE(o.created_at) < CURRENT_DATE()
+      JOIN \`${D}.order_items\` oi ON oi.order_id = o.order_id AND oi.status = 'Complete'
+      JOIN \`${D}.products\` p ON p.id = oi.product_id
+      GROUP BY s.label, p.brand
+    ),
+    ranked AS (
+      SELECT label, cents, ROW_NUMBER() OVER (PARTITION BY label ORDER BY cents DESC) AS rn
+      FROM sales
+    )
+    SELECT label, COUNT(*) AS brands_with_sales,
+      ROUND(SUM(IF(rn <= 5, cents, 0)) / SUM(cents), 3) AS top5_share,
+      ROUND(SUM(IF(rn <= 20, cents, 0)) / SUM(cents), 3) AS top20_share,
+      ROUND(SUM(IF(rn <= 30, cents, 0)) / SUM(cents), 3) AS top30_share
+    FROM ranked GROUP BY label ORDER BY label`,
+  task005_daily_sales: `
+    WITH days AS (
+      SELECT s.label, DATE(o.created_at) AS day,
+        COUNT(*) AS items, COUNT(DISTINCT o.order_id) AS orders,
+        SUM(CAST(ROUND(oi.sale_price * 100) AS INT64)) AS cents
+      FROM UNNEST([
+        STRUCT('last 1 year' AS label, DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR) AS start_date),
+        STRUCT('last 5 years', DATE_SUB(CURRENT_DATE(), INTERVAL 5 YEAR))
+      ]) s
+      JOIN \`${D}.orders\` o ON DATE(o.created_at) >= s.start_date AND DATE(o.created_at) < CURRENT_DATE()
+      JOIN \`${D}.order_items\` oi ON oi.order_id = o.order_id AND oi.status = 'Complete'
+      GROUP BY s.label, day
+    )
+    SELECT label,
+      COUNT(*) AS days_with_sales,
+      DATE_DIFF(CURRENT_DATE(), MIN(day), DAY) AS days_since_first_sale,
+      MIN(items) AS min_items, MAX(items) AS max_items,
+      MIN(orders) AS min_orders, MAX(orders) AS max_orders,
+      MIN(cents) / 100 AS min_revenue, MAX(cents) / 100 AS max_revenue
+    FROM days GROUP BY label ORDER BY label`,
+  task005_future_dated_orders: `
+    SELECT COUNT(DISTINCT o.order_id) AS orders_after_today, COUNT(*) AS complete_items_after_today,
+      MAX(DATE(o.created_at)) AS latest_order_date
+    FROM \`${D}.orders\` o
+    JOIN \`${D}.order_items\` oi ON oi.order_id = o.order_id AND oi.status = 'Complete'
+    WHERE DATE(o.created_at) >= CURRENT_DATE()`,
+  // Draft capability queries (last 5 years), counted rather than printed: rows and bytes processed.
+  task005_draft_product_query_5y: `
+    SELECT COUNT(*) AS row_count FROM (
+      SELECT p.id, p.name, p.category, p.department, p.brand,
+        SUM(CAST(ROUND(oi.sale_price * 100) AS INT64)) AS revenue_cents, COUNT(*) AS item_count
+      FROM \`${D}.order_items\` oi
+      JOIN \`${D}.orders\` o ON o.order_id = oi.order_id
+      JOIN \`${D}.products\` p ON p.id = oi.product_id
+      WHERE oi.status = 'Complete'
+        AND o.created_at >= TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 5 YEAR))
+        AND o.created_at < TIMESTAMP(CURRENT_DATE())
+      GROUP BY p.id, p.name, p.category, p.department, p.brand)`,
+  task005_draft_daily_query_5y: `
+    SELECT COUNT(*) AS row_count FROM (
+      SELECT DATE(o.created_at) AS day,
+        SUM(CAST(ROUND(oi.sale_price * 100) AS INT64)) AS revenue_cents,
+        COUNT(DISTINCT oi.order_id) AS order_count, COUNT(*) AS item_count
+      FROM \`${D}.order_items\` oi
+      JOIN \`${D}.orders\` o ON o.order_id = oi.order_id
+      JOIN \`${D}.products\` p ON p.id = oi.product_id
+      WHERE oi.status = 'Complete'
+        AND o.created_at >= TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 5 YEAR))
+        AND o.created_at < TIMESTAMP(CURRENT_DATE())
+        AND p.category IN UNNEST(['Jeans', 'Sweaters'])
+      GROUP BY day)`,
 };
 
 describe.skipIf(!projectId)("TheLook profile (needs GOOGLE_CLOUD_PROJECT)", () => {

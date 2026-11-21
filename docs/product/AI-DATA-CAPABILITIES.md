@@ -35,6 +35,12 @@ The assistant must choose among these broad capabilities. Do not create one stor
 
 Each description below is written for the AI's capability catalogue. The operation name is an implementation identifier; selection must be based on the purpose, definitions, inputs, and outputs rather than keyword matching alone.
 
+**Implementation status:**
+- **Built:** `customer_spending` (TASK-003/004), `product_sales_performance` with its grouped view, and `sales_time_series` (TASK-005).
+- **Deferred:** `product_group_performance`. Its one-period questions are answered by the grouped view of `product_sales_performance` (TASK-005 decision S1).
+- **Not built yet:** the other capabilities.
+- The text the model receives is the registry's catalogue (`api/src/analysis/capabilities/registry.ts`), kept in line with the sections below.
+
 ### 1. Customer spending analysis — `customer_spending`
 
 **AI description:** Use this capability when the user wants to compare customers by the monetary value of completed purchases. For the requested scope, return a customer-level summary with customer ID, display name, total spend, distinct completed-order count, and average spend per completed order. Support validated date bounds, optional spend/order filters, measure selection, sort direction, and result limit. Use the full customer-level result for follow-up ranking questions within the loaded scope. Do not use this capability when the user is asking only about purchase frequency, recency, or a specific order's line items.
@@ -61,11 +67,20 @@ Each description below is written for the AI's capability catalogue. The operati
 
 ### 4. Product sales performance — `product_sales_performance`
 
-**AI description:** Use this capability to compare individual products by sales results. Return product ID/name, category, revenue, and item count for the selected scope. Allow the user to choose revenue or item count as the ranking measure, plus date bounds, product filters, sort direction, and result limit. In this dataset, each completed `order_items` row represents an item; count rows for item count. Do not use this capability for grouped category, brand, or department analysis; use `product_group_performance` for that.
+**AI description:** Use this capability to compare individual products by sales results. Return product ID/name, category, department, brand, revenue, and item count for the selected scope. Allow the user to choose revenue or item count as the ranking measure, plus date bounds, product filters, sort direction, and result limit. In this dataset, each completed `order_items` row represents an item; count rows for item count. The same result can be shown **grouped by category, department, or brand** for one period (a view, so no new retrieval): use that for “which category performed best?”. Not for sales over time.
 
-**Example requests:** “Which products earned the most revenue?”, “Which products sold the most units?”, “Show the lowest-selling products this quarter.”
+**Example requests:** “Which products earned the most revenue?”, “Which products sold the most units?”, “Show the lowest-selling products this quarter,” “Which category performed best?”, “Show revenue by department.”
 
 **Clarify when needed:** Whether “top-selling” means revenue or units when context does not resolve it.
+
+**As built (TASK-005):**
+- **Grouped view** (`refinement.group_by`):
+  - row filters apply first; each group has its product count, revenue, and items, sorted by the view's measure;
+  - all categories and departments are shown; for brands, the top 20, or 1–30 on request, plus one exact “Other (*n* brands)” row;
+  - `none` returns to product rows; customers cannot be grouped;
+  - analyses still run on product rows.
+- **Brand values** (about 2,000 per year) are never sent to the model, only their count. A brand filter must use the exact name and is checked against the stored result.
+- **Views:** bar, horizontal bar, and table for products; also pie when grouped.
 
 ### 5. Category, department, and brand performance — `product_group_performance`
 
@@ -75,6 +90,8 @@ Each description below is written for the AI's capability catalogue. The operati
 
 **Clarify when needed:** Which grouping dimension or measure the user means if not evident.
 
+**Status: deferred (TASK-005 S1).** One-period group totals are the grouped view of `product_sales_performance`. Comparing groups across two periods (“which department grew most?”) is not built yet.
+
 ### 6. Sales time series — `sales_time_series`
 
 **AI description:** Use this capability when the user asks how sales changed over time. Return revenue, distinct order count, and item count grouped into a validated day, week, or month interval. Support date bounds and optional product/category/brand filters, and optional comparison with a second period. Do not use it for individual-customer rankings unless a customer breakdown is explicitly requested and permitted.
@@ -82,6 +99,19 @@ Each description below is written for the AI's capability catalogue. The operati
 **Example requests:** “Show monthly sales for the last year,” “Did sales rise compared with the previous period?”, “Show weekly revenue for this product.”
 
 **Clarify when needed:** Date range, interval, and comparison baseline when they cannot be inferred from the request or conversation.
+
+**As built (TASK-005):**
+- **Retrieval:**
+  - daily rows (one per UTC day with completed sales), rolled up to day, week (ISO, Monday to Sunday), or month in PostgreSQL;
+  - default interval: days up to 31 days, weeks up to 92 days, otherwise months; daily buckets up to 366 days;
+  - days without sales count as zero; days after today are left out and the answer says so;
+  - first and last buckets not fully inside the period, and the bucket containing today, are marked partial.
+- **Parameters** (changing one needs new data and a confirmed switch):
+  - a product filter by category or department (1–10 values). Brand and single-product filters are deferred, because brand names cannot be checked before retrieval.
+  - a comparison: `previous_period` (the same number of calendar months before when the period is whole months, otherwise the same number of days), `previous_year` (29 Feb becomes 28 Feb), or `custom` dates. The backend computes the first two.
+- **View settings** (no new data): interval, measure (revenue, orders, or items), and view (line, bar, or table).
+- **Comparison display:** two lines aligned by bucket position, both periods' dates in the table, and period totals with the change and % change (none from a zero total).
+- **Refused with an alternative:** sorting, row limits, value filters, grouping, concentration, and pie or horizontal-bar views. The summary analysis names the lowest and highest bucket. Forecasts and causal “why” questions are refused.
 
 ### 7. Customer segment analysis — `customer_segment_analysis`
 
@@ -147,6 +177,13 @@ TheLook is synthetic ecommerce data. Google documents shopper, order, order-item
 - “Show that as a pie chart.” → keep the active result and change only presentation; warn if a pie chart would be unreadable or misleading for the result shape.
 - “Which products were returned most?” → if returns fields are outside the active result set, explain the current scope and ask before retrieving the returns/cancellations data.
 - “Who are our best customers?” → ask whether “best” means highest spend, most orders, or most recent activity.
+- “Which category performed best?” → `product_sales_performance` grouped by category (or clarify revenue versus units).
+- “Show monthly sales for 2025” → `sales_time_series` for 2025 by month.
+- “Compare with the previous year” (a series loaded) → the same series with a `previous_year` comparison: new data, so the switch is confirmed first.
+- “Show it by week” or “orders instead” (a series loaded) → a view change; no retrieval.
+- “Forecast next year's sales” → refuse; offer the past trend.
+
+**Known limitation (TASK-005 DEC-003):** “Top 10 brands by revenue” was read by the model as a time-series measure on product results in every evaluation attempt and twice in the walkthrough. “Show 10 brands” fails the same way. The app refuses the turn (safely; nothing wrong is shown) and explains what works instead: sort by revenue or items sold, and grouping by brand shows the top 20 brands with the rest as “Other”. A number of brands cannot be chosen yet.
 
 ## Implementation boundary
 

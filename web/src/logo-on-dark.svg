@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 160" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 24 620 108" role="img" aria-labelledby="title desc">
   <title id="title">Conversational Analytics Workbench</title>
-  <desc id="desc">The Conversational Analytics Workbench logo for dark backgrounds: a white circular conversation ring with rising analytics bars, beside the project name and tagline in light text.</desc>
+  <desc id="desc">The Conversational Analytics Workbench logo for dark backgrounds: a white circular conversation ring with rising analytics bars, beside the project name in white. The header shows the tagline as text beside it, because at header size it would be too small to read.</desc>
   <g transform="translate(8 16)">
     <path d="M33 82 L25 111 L50 94 Z" fill="#FFFFFF" />
     <path d="M92 36 A40 40 0 1 0 92 92" fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" />
@@ -10,7 +10,5 @@
   </g>
   <g font-family="Inter, SF Pro Display, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
     <text x="158" y="70" fill="#FFFFFF" font-size="31" font-weight="650" letter-spacing="-0.7">Conversational Analytics</text>
-    <text x="158" y="106" fill="#FFFFFF" font-size="29" font-weight="550" letter-spacing="-0.4">Workbench</text>
-    <text x="159" y="134" fill="#C5D3E0" font-size="14" font-weight="450" letter-spacing="0.15">Ask your data. See the evidence.</text>
-  </g>
+    <text x="158" y="106" fill="#FFFFFF" font-size="29" font-weight="550" letter-spacing="-0.4">Workbench</text>  </g>
 </svg>
