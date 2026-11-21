@@ -20,8 +20,8 @@ Record only material decisions or change requests. Keep pending questions visibl
 
 - **Raised:** 2026-11-08
 - **Status:** Approved
-- **Options:** (1) Claude writes the scripts and runs each live BigQuery or Anthropic call after the user approves it; (2) the user runs them.
-- **User decision:** Option 1. Claude asks before each live run, never opens or prints credentials, and the SDKs read credentials from the environment.
+- **Options:** (1) The coding agent writes the scripts and runs each live BigQuery or Anthropic call after the user approves it; (2) the user runs them.
+- **User decision:** Option 1. The coding agent asks before each live run, never opens or prints credentials, and the SDKs read credentials from the environment.
 - **Decision rationale/date:** Faster iteration on profiling, the known-answer check, and the evaluation. 2026-11-08.
 
 ## DEC-003 — Client libraries

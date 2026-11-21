@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the data capabilities available to the conversational analytics assistant. It is a product and implementation handoff for Claude; it is not permission to connect to a live cloud project or run deployment commands.
+This document defines the data capabilities available to the conversational analytics assistant. It is a product and implementation handoff for the coding agent; it is not permission to connect to a live cloud project or run deployment commands.
 
 The showcase uses Google's synthetic TheLook ecommerce data. It is intended to demonstrate how an AI assistant can select a suitable, approved data capability, clarify missing details, and present verified results. Do not describe the synthetic data as real customer or business data.
 

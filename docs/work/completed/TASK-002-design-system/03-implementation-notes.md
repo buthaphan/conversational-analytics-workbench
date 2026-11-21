@@ -115,7 +115,7 @@ Run `npm run dev` and open the printed local URL (usually `http://localhost:5173
 | 6 | Visual review: colors, type, spacing, components, and the chart look right to you | **Approved** by the user, 2026-11-08 ("all is good") |
 
 Browser used: Chrome (current desktop version)  Date: 2026-11-08  
-Checks performed by the user; results reported to Claude and recorded here with the user.
+Checks performed by the user; results reported to the coding agent and recorded here with the user.
 
 ## Review fixes (implementation pass 2, 2026-11-08)
 

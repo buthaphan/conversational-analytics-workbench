@@ -25,7 +25,7 @@ A signed-in user can access the one-page workspace, keep analysis state isolated
 - No administrator role, admin console, or admin-only routes.
 - No self-service signup, invite links, password reset, MFA, or SSO has been approved yet.
 - Account provisioning and whether accounts themselves expire remain open.
-- Do not store or send real credentials in the repository or Claude conversation.
+- Do not store or send real credentials in the repository or the coding agent conversation.
 
 ## Agreed behavior
 

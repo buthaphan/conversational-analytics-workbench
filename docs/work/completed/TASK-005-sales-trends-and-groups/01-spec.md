@@ -57,11 +57,11 @@ A showcase user can rank customers and products for one period, but cannot ask h
 
 | Item | Owner | Validation |
 |---|---|---|
-| TheLook `products` has `department` and `brand`, with a small set of departments and a brand count that suits a top-20 cap | Claude | Profile run (AC-1). If brand values are often null, nulls are shown as "Unknown brand" and recorded in the profile. |
+| TheLook `products` has `department` and `brand`, with a small set of departments and a brand count that suits a top-20 cap | Agent | Profile run (AC-1). If brand values are often null, nulls are shown as "Unknown brand" and recorded in the profile. |
 | The BigQuery Sandbox, application default credentials, and the Anthropic key and spend limit from TASK-004 still work | User | The first approved live run succeeds |
-| Each live run (profile, known-answer, evaluation, smoke call) is approved by the user first (TASK-004 DEC-002) | Claude | Recorded in the implementation notes |
-| ECharts (already installed) supports line, horizontal bar, and pie, so no new dependency is needed | Claude | Build; a new dependency would need the user's approval |
-| The extended decision schema stays within the structured-output schema limits found in TASK-004 | Claude | Unit test of the schema plus one approved smoke call early (TASK-004 friction note) |
+| Each live run (profile, known-answer, evaluation, smoke call) is approved by the user first (TASK-004 DEC-002) | Agent | Recorded in the implementation notes |
+| ECharts (already installed) supports line, horizontal bar, and pie, so no new dependency is needed | Agent | Build; a new dependency would need the user's approval |
+| The extended decision schema stays within the structured-output schema limits found in TASK-004 | Agent | Unit test of the schema plus one approved smoke call early (TASK-004 friction note) |
 
 ## Acceptance criteria
 
@@ -128,7 +128,7 @@ A showcase user can rank customers and products for one period, but cannot ask h
 
 ## Open decisions
 
-- **Brand cap and time-series row cap** (Claude after profiling; user reviews): defaults in S10 and AC-4, confirmed or changed in AC-1.
+- **Brand cap and time-series row cap** (agent after profiling; user reviews): defaults in S10 and AC-4, confirmed or changed in AC-1.
 - Approving this spec approves S5–S10.
 
 ## Revision history

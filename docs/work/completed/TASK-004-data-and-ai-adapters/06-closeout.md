@@ -47,7 +47,7 @@ Spec Definition of Done:
 ## Decisions
 
 - **DEC-001:** two-phase turn; a message during a running turn gets 409.
-- **DEC-002:** Claude runs live calls after the user's approval of each run.
+- **DEC-002:** The coding agent runs live calls after the user's approval of each run.
 - **DEC-003:** official SDKs.
 - **DEC-004:** walkthrough layout changes:
   - navy header with a logo-only heading and a light logo variant;

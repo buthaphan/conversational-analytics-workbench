@@ -131,7 +131,7 @@ If "these" could mean either the filtered set or the displayed rows, the backend
 
 | | BigQuery Sandbox | Anthropic API |
 |---|---|---|
-| **Setup (user, TASK-004)** | Google Cloud project (sandbox, no card); enable the BigQuery API; `gcloud auth application-default login`; project ID in `.env` | Console account and an API key for this app; a monthly spend limit; key in `.env` (never read by Claude) |
+| **Setup (user, TASK-004)** | Google Cloud project (sandbox, no card); enable the BigQuery API; `gcloud auth application-default login`; project ID in `.env` | Console account and an API key for this app; a monthly spend limit; key in `.env` (never read by the coding agent) |
 | **Cost** | Sandbox: 1 TB of queries per month free; each TheLook query scans tens of MB, so showcase use is effectively free. A per-query bytes cap guards against mistakes. | Sonnet 5.5: $2 input / $10 output per million tokens, cached input reads about $0.20/M. Rough estimate: about $0.01–0.02 per turn; to be measured. |
 | **Risks / limits** | Needs network and the user's Google sign-in; about 1–3 s per query; the real SQL is not exercised in CI (manual known-answer check instead); Docker needs mounted credentials; the AWS showcase will later need a service account | Spending (capped by the limit); a few seconds per turn; low rate limits on new accounts; a text-only reply is treated as a message to the user, never as data |
 
